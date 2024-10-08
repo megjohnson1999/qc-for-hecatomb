@@ -1,7 +1,8 @@
-args:
-   reads:
-   output:
-   log:
+reads:
+output: "out"
+log:
+fastq_names_1: "{sample}_1.fastq.gz"
+fastq_names_2: "{sample}_2.fastq.gz"
 
 trimmers:
   - fastp
