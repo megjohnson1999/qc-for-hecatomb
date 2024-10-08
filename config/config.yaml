@@ -1,10 +1,6 @@
  args:
    reads:
    output:
-   host:
-   minimap:
-   fastqc:
-   subsample:
    log:
 
 trimmers:
@@ -14,21 +10,6 @@ trimmers:
 qc:
     compression:
          1
-    minimapIndex:
-        -I 8G
-    hostRemoveFlagstat:
-        -f 4
-        -F 3584
-    fastp:
-        --qualified_quality_phred 15
-        --length_required 90
-        --cut_tail 
-        --cut_tail_window_size 25
-        --cut_tail_mean_quality 15
-        --dedup
-        --dup_calc_accuracy 4
-        --trim_poly_x
-        --detect_adapter_for_pe
     bbduk:
         rm_5p:
           k=16
