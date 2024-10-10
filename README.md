@@ -5,7 +5,8 @@ Subworkflow for if you just want to:
 
 
 # How to run:
-Run from an environment with Snakemake version 8+, [mamba](https://anaconda.org/conda-forge/mamba), and [snakemake-executor-plugin-slurm](https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html)
+- Git clone this repository
+- Run from an environment with Snakemake version 8+, [mamba](https://anaconda.org/conda-forge/mamba), and [snakemake-executor-plugin-slurm](https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html)
 
 ```
 source /ref/sahlab/software/miniforge3/bin/activate
