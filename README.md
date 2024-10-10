@@ -1,3 +1,9 @@
+# Purpose
+Subworkflow for if you just want to: 
+- Run the round A/B primer and contaminant removal steps of Hecatomb without any of the other preprocessing steps
+- Get the statistics (which Hecatomb doesn't currently output) for what was removed from each sample
+
+
 # How to run:
 Run from an environment with Snakemake version 8+, [mamba](https://anaconda.org/conda-forge/mamba), and [snakemake-executor-plugin-slurm](https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html)
 
