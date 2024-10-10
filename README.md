@@ -56,7 +56,7 @@ snakemake --profile ../profile/slurm/ --config reads=/scratch/sahlab/Megan/test_
   - db: vector_contaminants.fa 
 
 ### See workflow/databases to look at all database files
-Will need to be updated with new Illumina adapter or index sequences
+Some of these will need to be updated with new Illumina adapter/index sequences
 
 # Outputs:
 
