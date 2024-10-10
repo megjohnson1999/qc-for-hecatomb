@@ -7,11 +7,7 @@ dir["scripts"] = os.path.join(workflow.basedir, "..", "scripts")
 dir["db"] = os.path.join(workflow.basedir, "databases")
 
 # output directories
-try:
-    assert(config["args"]["output"]) is not None
-    dir["out"] = config["args"]["output"]
-except (KeyError, AssertionError):
-    dir["out"] = "primer_removal_test.out"
+dir["out"] = config["output"]
 
 # misc output directories
 dir["temp"] = os.path.join(dir["out"], "temp")
