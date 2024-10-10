@@ -61,6 +61,6 @@ Will need to be updated with new Illumina adapter or index sequences
 # Outputs:
 
 The output directory should contain a directory called "results" with a subdirectory called "stats". The stats directory contains files with statistics for the primers/contaminants removed from each sample.
-Currently, the stats for each rule for each sample are all in separate files. I can change this if there's a different way that would make it easier to work with.
+Currently, the stats for each rule for each sample are all in separate files. I can change this if there's a different way that would make it easier to work with (like combining the outputs from a single sample, or something like that).
 
 - see example output at /scratch/sahlab/Megan/rc2_subset/primer_removal_test.out/results/stats/
