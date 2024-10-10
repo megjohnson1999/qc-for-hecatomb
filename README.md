@@ -1,4 +1,4 @@
-# Purpose
+# Purpose:
 Subworkflow for if you just want to: 
 - Run the round A/B primer and contaminant removal steps of Hecatomb without any of the other preprocessing steps
 - Get the statistics (which Hecatomb doesn't currently output) for what was removed from each sample
