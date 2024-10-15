@@ -18,8 +18,6 @@ rule remove_5prime_primer:
         params = config["qc"]["bbduk"]["rm_5p"],
     conda:
         os.path.join(dir["env"], "bbmap.yaml")
-    group:
-        "roundAB"
     shell:
         """
         bbduk.sh \
@@ -40,7 +38,7 @@ rule remove_3prime_contaminant:
     input:
         r1=os.path.join(dir["temp"],"{sample}.R1.s1.fastq"),
         r2=os.path.join(dir["temp"],"{sample}.R2.s1.fastq"),
-        primers=os.path.join(dir["db"],"rc_primerB_ad6.fa")
+        primers=os.path.join(dir["db"],"nextera_rc_primerB_3_ad6.fa")
     output:
         r1=temp(os.path.join(dir["temp"],"{sample}.R1.s2.fastq")),
         r2=temp(os.path.join(dir["temp"],"{sample}.R2.s2.fastq")),
@@ -55,8 +53,6 @@ rule remove_3prime_contaminant:
         params = config["qc"]["bbduk"]["rm_3rt"]
     conda:
         os.path.join(dir["env"], "bbmap.yaml")
-    group:
-        "roundAB"
     shell:
         """
         bbduk.sh \
@@ -77,7 +73,7 @@ rule remove_primer_free_adapter:
     input:
         r1=os.path.join(dir["temp"],"{sample}.R1.s2.fastq"),
         r2=os.path.join(dir["temp"],"{sample}.R2.s2.fastq"),
-        primers=os.path.join(dir["db"],"nebnext_adapters.fa")
+        primers=os.path.join(dir["db"],"nextera_adapters.fa")
     output:
         r1=temp(os.path.join(dir["temp"],"{sample}.R1.s3.fastq")),
         r2=temp(os.path.join(dir["temp"],"{sample}.R2.s3.fastq")),
@@ -92,8 +88,6 @@ rule remove_primer_free_adapter:
         params = config["qc"]["bbduk"]["neb"]
     conda:
         os.path.join(dir["env"], "bbmap.yaml")
-    group:
-        "roundAB"
     shell:
         """
         bbduk.sh \
@@ -129,8 +123,6 @@ rule remove_adapter_free_primer:
         params = config["qc"]["bbduk"]["rm_afp"]
     conda:
         os.path.join(dir["env"], "bbmap.yaml")
-    group:
-        "roundAB"
     shell:
         """
         bbduk.sh \
@@ -166,8 +158,6 @@ rule remove_vector_contamination:
         params = config["qc"]["bbduk"]["rm_vc"]
     conda:
         os.path.join(dir["env"], "bbmap.yaml")
-    group:
-        "roundAB"
     shell:
         """
         bbduk.sh \
@@ -202,8 +192,6 @@ rule remove_low_quality:
         params = config["qc"]["bbduk"]["rm_lq"]
     conda:
         os.path.join(dir["env"], "bbmap.yaml")
-    group:
-        "roundAB"
     shell:
         """
         bbduk.sh \
@@ -224,8 +212,8 @@ rule zip_roundAB:
         r1=os.path.join(dir["temp"],"{sample}.R1.s6.fastq"),
         r2=os.path.join(dir["temp"],"{sample}.R2.s6.fastq"),
     output:
-        r1=temp(os.path.join(dir["output"],"{sample}_R1.fastq.gz")),
-        r2=temp(os.path.join(dir["output"],"{sample}_R2.fastq.gz")),
+        r1=os.path.join(dir["output"],"{sample}_R1.fastq.gz"),
+        r2=os.path.join(dir["output"],"{sample}_R2.fastq.gz"),
     benchmark:
         os.path.join(dir["bench"],"zip_roundAB.{sample}.txt")
     log:
@@ -236,8 +224,6 @@ rule zip_roundAB:
         compression = config["qc"]["compression"]
     conda:
         os.path.join(dir["env"], "pigz.yaml")
-    group:
-        "roundAB"
     shell:
         """
         pigz -p {threads} -{params.compression} -c {input.r1} > {output.r1} 2> {log}
