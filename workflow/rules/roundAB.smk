@@ -108,7 +108,7 @@ rule remove_adapter_free_primer:
     input:
         r1=os.path.join(dir["temp"],"{sample}.R1.s3.fastq"),
         r2=os.path.join(dir["temp"],"{sample}.R2.s3.fastq"),
-        primers=os.path.join(dir["db"],"rc_primerB_ad6.fa")
+        primers=os.path.join(dir["db"],"nextera_rc_primerB_3_ad6.fa")
     output:
         r1=temp(os.path.join(dir["temp"],"{sample}.R1.s4.fastq")),
         r2=temp(os.path.join(dir["temp"],"{sample}.R2.s4.fastq")),
