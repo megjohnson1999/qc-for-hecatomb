@@ -1,63 +1,127 @@
-rule fq_lint:
-    """Check that fastq files have valid format"""
+rule fastp:
+    """Run fastp to remove adapter sequences"""
     input:
         r1 = os.path.join(config["reads"], config["fastq_names_1"]),
         r2 = os.path.join(config["reads"], config["fastq_names_2"]),
     output:
-        lint=os.path.join(dir["logs"],"lint","{sample}.lint")
+        r1 = temp(os.path.join(dir["output"], "fastp", "{sample}_R1_trimmed.fastq.gz")),
+        r2 = temp(os.path.join(dir["output"], "fastp", "{sample}_R2_trimmed.fastq.gz")),
+        stats = os.path.join(dir["output"], "fastp", "{sample}.stats.json"),
+        html = os.path.join(dir["output"], "fastp", "{sample}.stats.html"), 
+    params:
+        config["qc"]["fastp"]    
+    threads: 12
     conda:
-        os.path.join(dir["env"], "fq.yaml")
+        os.path.join(dir["env"], "fastp.yaml")
+    log:
+        os.path.join(dir["logs"], "fastp", "fastp.{sample}.log")
+    benchmark:
+        os.path.join(dir["bench"], "fastp", "fastp.{sample}.txt")
     shell:
         """
-        fq lint {input.r1} {input.r2} > {output.lint} 
+        fastp \
+        -i {input.r1} \
+        -I {input.r2} \
+        -o {output.r1} \
+        -O {output.r2} \
+        -j {output.stats} \
+        -h {output.html} \
+        --thread {threads} \
+        {params} \
+        &> {log}
         """
 
-rule summary_stats:
-    """Get some basic stats about the input data"""
-    input:
-        r1_all = expand(os.path.join(config["reads"], config["fastq_names_1"]), sample=SAMPLES),
-        r2_all = expand(os.path.join(config["reads"], config["fastq_names_2"]), sample=SAMPLES),
-        lint = expand(os.path.join(dir["logs"],"lint","{sample}.lint"), sample=SAMPLES)
-    output:
-        os.path.join(dir["stats"], "initial_summary.txt")
-    conda:
-        os.path.join(dir["env"], "seqkit.yaml")
-    shell:
-        """
-        seqkit stats -T {input.r1_all} {input.r2_all} > {output}
-        """
-        
-rule fastqc:
-    """Perform fastqc on the input data"""
-    input:
-        r1 = expand(os.path.join(config["reads"], config["fastq_names_1"]), sample=SAMPLES),
-        r2 = expand(os.path.join(config["reads"], config["fastq_names_2"]), sample=SAMPLES),
-    output:
-        fastqc_r1 = expand(os.path.join(dir["results"], "fastqc", "{sample}_R1_fastqc.html"), sample=SAMPLES),
-        fastqc_r2 = expand(os.path.join(dir["results"], "fastqc", "{sample}_R2_fastqc.html"), sample=SAMPLES),
-    params:
-        outdir=os.path.join(dir["results"], "fastqc")
-    conda:
-        os.path.join(dir["env"], "fastqc.yaml")
-    shell:
-        """
-        fastqc {input.r1} {input.r2} -o {params.outdir}
-        """        
+#rule(s) primerB:
 
-rule multiqc:
-    """Get a report that consolidates the results for all samples"""
+
+rule remove_vector_contamination:
     input:
-        expand(os.path.join(dir["results"], "fastqc", "{sample}_R1_fastqc.html"), sample=SAMPLES),
-        expand(os.path.join(dir["results"], "fastqc", "{sample}_R2_fastqc.html"), sample=SAMPLES),
+        r1 = os.path.join(dir["output"], "fastp", "{sample}_R1_trimmed.fastq.gz"),
+        r2 = os.path.join(dir["output"], "fastp", "{sample}_R2_trimmed.fastq.gz"),
+        contaminants = os.path.join(dir["db"], "vector_contaminants.fa")
     output:
-        os.path.join(dir["stats"], "multiqc_report.html")
+        r1 = temp(os.path.join(dir["output"], "rm_vector_contamination", "{sample}_R1_rm_vc.fastq.gz")),
+        r2 = temp(os.path.join(dir["output"], "rm_vector_contamination", "{sample}_R2_rm_vc.fastq.gz")),
+        stats = os.path.join(dir["stats"], "rm_vector_contamination", "{sample}_rm_vc.stats"),
     params:
-        fastqc = os.path.join(dir["results"], "fastqc"),
-        outdir = dir["stats"]
+        config["qc"]["bbduk"]["rm_vc"]
+    threads: 24
     conda:
-        os.path.join(dir["env"], "multiqc.yaml")
+        os.path.join(dir["env"], "bbmap.yaml")
+    log:
+        os.path.join(dir["logs"], "remove_vector_contamination", "{sample}_remove_vector_contamination.log")
+    benchmark:
+        os.path.join(dir["bench"], "remove_vector_contamination", "{sample}_remove_vector_contamination.txt")
     shell:
         """
-        multiqc {params.fastqc} -o {params.outdir}
-        #mv {params.fastqc}/multiqc_report.html {params.outdir} 
+        bbduk.sh \
+        in={input.r1} \
+        in2={input.r2} \
+        ref={input.contaminants} \
+        out={output.r1} \
+        out2={output.r2} \
+        stats={output.stats} \
+        {params} \
+        threads={threads} \
+        2> {log}
+        """
+
+rule remove_low_quality:
+    input:
+        r1 = os.path.join(dir["output"], "rm_vector_contamination", "{sample}_R1_rm_vc.fastq.gz"),
+        r2 = os.path.join(dir["output"], "rm_vector_contamination", "{sample}_R2_rm_vc.fastq.gz"),
+    output:
+        r1 = temp(os.path.join(dir["output"], "rm_low_quality", "{sample}_R1_rm_lq.fastq.gz")),
+        r2 = temp(os.path.join(dir["output"], "rm_low_quality", "{sample}_R2_rm_lq.fastq.gz")),
+        stats = os.path.join(dir["stats"], "rm_low_quality", "{sample}_low_quality.stats"),
+    params:
+        config["qc"]["bbduk"]["rm_lq"]
+    threads: 24
+    conda:
+        os.path.join(dir["env"], "bbmap.yaml")
+    log:
+        os.path.join(dir["logs"], "remove_low_quality", "{sample}_remove_low_quality.log")
+    benchmark:
+        os.path.join(dir["bench"], "remove_low_quality", "{sample}_remove_low_quality.txt")
+    shell:
+        """
+        bbduk.sh \
+        in={input.r1} \
+        in2={input.r2} \
+        out={output.r1} \
+        out2={output.r2} \
+        stats={output.stats} \
+        threads={threads} \
+        {params} \
+        2> {log}
+        """
+
+
+rule bbmerge:
+    input:
+        r1 = os.path.join(dir["output"], "rm_low_quality", "{sample}_R1_rm_lq.fastq.gz"),
+        r2 = os.path.join(dir["output"], "rm_low_quality", "{sample}_R2_rm_lq.fastq.gz"),
+    output:
+        merged = os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"),
+        unmerged1 = os.path.join(dir["output"], "bbmerge", "{sample}_R1_unmerged.fastq.gz"),
+        unmerged2 = os.path.join(dir["output"], "bbmerge", "{sample}_R2_unmerged.fastq.gz"),
+    params:
+        config["qc"]["bbmerge"]
+    threads: 24
+    conda:
+        os.path.join(dir["env"], "bbmap.yaml")
+    log:
+        os.path.join(dir["logs"], "bbmerge", "{sample}_bbmerge.log")
+    benchmark:
+        os.path.join(dir["bench"], "bbmerge", "{sample}_bbmerge.txt")
+    shell:
+        """
+        bbmerge.sh \
+        in1={input.r1} \
+        in2={input.r2} \
+        out={output.merged} \
+        outu1={output.unmerged1} \
+        outu2={output.unmerged2} \
+        {params} \
+        &> {log}
         """
