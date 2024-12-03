@@ -3,3 +3,30 @@ output: "out"
 log:
 fastq_names_1: "{sample}_R1.fastq.gz"
 fastq_names_2: "{sample}_R2.fastq.gz"
+
+qc:
+    fastp:
+        --qualified_quality_phred=15
+        --length_required=90
+        --cut_tail
+        --cut_tail_window_size=25
+        --cut_tail_mean_quality=15
+        --trim_poly_g
+        --trim_poly_x
+        --detect_adapter_for_pe
+    bbduk:
+        rm_vc:
+          k=31
+          hammingdistance=1
+          ordered=t
+          ow=t
+        rm_lq:
+          ordered=t
+          qtrim=r
+          maxns=2
+          entropy=0.5
+          entropywindow=25
+          trimq=15
+          minlength=90
+    bbmerge:
+        minoverlap=20

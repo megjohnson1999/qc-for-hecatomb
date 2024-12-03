@@ -28,12 +28,15 @@ dir["bench"] = os.path.join(dir["out"], "benchmarks")
 dir["output"] = os.path.join(dir["results"], "output")
 dir["stats"] = os.path.join(dir["results"], "stats")
 
+include: "rules/check_fastq.smk"
 include: "rules/preprocessing.smk"
 
 rule all:
     input:
         #expand(os.path.join(dir["output"],"{sample}_R2.fastq.gz"), sample = SAMPLES),
         os.path.join(dir["stats"], "initial_summary.txt"),
-        os.path.join(dir["stats"], "multiqc_report.html")
-        #"results/stats/multiqc_report.html"
+        os.path.join(dir["stats"], "multiqc_report.html"),
+        expand(os.path.join(dir["output"], "fastp", "{sample}_R2_trimmed.fastq.gz"), sample = SAMPLES),
+        #expand(os.path.join(dir["stats"], "rm_vector_contamination", "{sample}_rm_vc.stats"), sample = SAMPLES)
+        expand(os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"), sample = SAMPLES),
     default_target: True
