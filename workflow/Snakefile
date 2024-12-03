@@ -2,6 +2,8 @@ from snakemake.utils import min_version
 min_version("8.0")
 
 import os
+from glob import glob
+import yaml
 
 configfile: "../config/config.yaml"
 SAMPLES, = glob_wildcards(os.path.join(config["reads"],config["fastq_names_1"]))
@@ -20,15 +22,18 @@ dir["out"] = config["output"]
 # misc output directories
 dir["temp"] = os.path.join(dir["out"], "temp")
 dir["results"] = os.path.join(dir["out"], "results")
-dir["log"] = os.path.join(dir["out"], "logs")
+dir["logs"] = os.path.join(dir["out"], "logs")
 dir["reports"] = os.path.join(dir["out"], "reports")
 dir["bench"] = os.path.join(dir["out"], "benchmarks")
 dir["output"] = os.path.join(dir["results"], "output")
 dir["stats"] = os.path.join(dir["results"], "stats")
 
-include: "rules/roundAB.smk"
+include: "rules/preprocessing.smk"
 
 rule all:
     input:
-        expand(os.path.join(dir["output"],"{sample}_R2.fastq.gz"), sample = SAMPLES)
+        #expand(os.path.join(dir["output"],"{sample}_R2.fastq.gz"), sample = SAMPLES),
+        os.path.join(dir["stats"], "initial_summary.txt"),
+        os.path.join(dir["stats"], "multiqc_report.html")
+        #"results/stats/multiqc_report.html"
     default_target: True
