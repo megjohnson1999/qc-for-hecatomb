@@ -36,29 +36,5 @@ If your fastq files have any suffixes other than _R1.fastq.gz and _R2.fastq.gz, 
 ### Example command:
 
 ```
-snakemake --profile ../profile/slurm/ --config reads=/scratch/sahlab/Megan/test_reads output=/scratch/sahlab/Megan/primer_removal_test.out
+snakemake --profile ../profile/slurm/ --config reads=/scratch/sahlab/Megan/test_reads output=/scratch/sahlab/Megan/pipeline_test.out
 ```
-
-# Rules and databases:
-- remove_5prime_primer
-  - db: primerB.fa
- 
-- remove_3prime_contaminant
-  - db: rc_primerB_ad6.fa
-
-- remove_primer_free_adapter
-  - db: nebnext_adapters.fa
-  
-- remove_adapter_free_primer
-  - db: rc_primerB_ad6.fa
-  
-- remove_vector_contamination (remove contaminants like PhiX)
-  - db: vector_contaminants.fa 
-
-### See workflow/databases to look at all database files
-Some of these will need to be updated with new Illumina adapter/index sequences
-
-# Outputs:
-
-The output directory should contain a directory called "results" with a subdirectory called "stats". The stats directory contains files with statistics for the primers/contaminants removed from each sample.
-Currently, the stats for each rule for each sample are all in separate files. I can change this if there's a different way that would make it easier to work with for creating the plots.
