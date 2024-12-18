@@ -30,6 +30,8 @@ dir["stats"] = os.path.join(dir["results"], "stats")
 
 include: "rules/check_fastq.smk"
 include: "rules/preprocessing.smk"
+include: "rules/mask_host_genome.smk"
+#include: "rules/host_removal.smk"
 
 rule all:
     input:
@@ -39,4 +41,5 @@ rule all:
         expand(os.path.join(dir["output"], "fastp", "{sample}_R2_trimmed.fastq.gz"), sample = SAMPLES),
         #expand(os.path.join(dir["stats"], "rm_vector_contamination", "{sample}_rm_vc.stats"), sample = SAMPLES)
         expand(os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"), sample = SAMPLES),
+        #expand(os.path.join(dir["output"], "host_removed", "{sample}_R1_hr.fastq.gz"), sample = SAMPLES),
     default_target: True
