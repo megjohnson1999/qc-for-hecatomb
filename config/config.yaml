@@ -4,6 +4,11 @@ log:
 fastq_names_1: "{sample}_R1.fastq.gz"
 fastq_names_2: "{sample}_R2.fastq.gz"
 
+
+viral_db: "/ref/sahlab/data/virus_genome_db/sequences_20241205_4728509.fasta"
+host_ref: "/ref/sahlab/data/human_T2T/data/GCF_009914755.1/GCF_009914755.1_T2T-CHM13v2.0_genomic.fna"
+host_ref_masked: "/ref/sahlab/data/human_T2T/masked.fa"  
+
 qc:
     fastp:
         --qualified_quality_phred=15
@@ -15,6 +20,24 @@ qc:
         --trim_poly_x
         --detect_adapter_for_pe
     bbduk:
+        s1:
+          ktrim=l
+          k=8
+          rcomp=f
+          ordered=t
+          ow=t
+        s2:
+          ktrim=r
+          k=8
+          rcomp=f
+          ordered=t
+          ow=t
+        s3_and_4:
+          ktrim=r
+          k=19
+          rcomp=f
+          ordered=t
+          ow=t
         rm_vc:
           k=31
           hammingdistance=1
@@ -30,3 +53,4 @@ qc:
           minlength=90
     bbmerge:
         minoverlap=20
+    
