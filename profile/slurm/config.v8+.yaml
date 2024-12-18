@@ -15,3 +15,15 @@ keep-going: True
 rerun-incomplete: True
 printshellcmds: True
 scheduler: greedy
+
+set-resources:
+    map_shreds:
+        mem: 64G
+    pB_step_1:
+        mem: 24G
+    pB_step_2:
+        mem: 24G
+    pB_step_3:
+        mem: 24G
+    pB_step_4:
+        mem: 24G 
