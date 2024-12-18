@@ -31,13 +31,137 @@ rule fastp:
         &> {log}
         """
 
-#rule(s) primerB:
+
+rule pB_step_1:
+    # potential contamination type 1: Find 8 digits of primerB, trim to the left
+    input:
+        r1 = os.path.join(dir["output"], "fastp", "{sample}_R1_trimmed.fastq.gz"),
+        r2 = os.path.join(dir["output"], "fastp", "{sample}_R2_trimmed.fastq.gz"), 
+        ref = os.path.join(dir["db"], "last_8digits_primerB.fa"),
+    output:
+        out = os.path.join(dir["output"], "primerB", "step_1", "{sample}_R1.s1.out.fastq"),
+        out2 = os.path.join(dir["output"], "primerB", "step_1", "{sample}_R2.s1.out.fastq"),
+        stats = os.path.join(dir["output"], "primerB", "step_1", "{sample}_s1.stats"),
+    params:
+        config["qc"]["bbduk"]["s1"]
+    threads: 8
+    conda:
+        os.path.join(dir["env"], "bbmap.yaml")
+    log:
+        os.path.join(dir["logs"], "primerB", "{sample}_left_pB.log")
+    benchmark:
+        os.path.join(dir["bench"], "primerB", "{sample}_left_pB.txt")
+    shell:
+        """
+        bbduk.sh \
+        in={input.r1} \
+        in2={input.r2} \
+        ref={input.ref} \
+        out={output.out} \
+        out2={output.out2} \
+        stats={output.stats} \
+        {params}
+        """
+
+
+rule pB_step_2:
+    # potential contamination type 2: Find the first 8 digits of rc primerB, trim to the right
+    input:
+        r1 = os.path.join(dir["output"], "primerB", "step_1", "{sample}_R1.s1.out.fastq"),
+        r2 = os.path.join(dir["output"], "primerB", "step_1", "{sample}_R2.s1.out.fastq"),
+        ref = os.path.join(dir["db"], "first_8digits_primerB_rc.fa")
+    output:
+        out = os.path.join(dir["output"], "primerB", "step_2", "{sample}_R1.s2.out.fastq"),
+        out2 = os.path.join(dir["output"], "primerB", "step_2", "{sample}_R2.s2.out.fastq"),
+        stats = os.path.join(dir["output"], "primerB", "step_2", "{sample}_s2.stats"), 
+    params:
+        config["qc"]["bbduk"]["s2"]
+    threads: 8
+    conda:
+        os.path.join(dir["env"], "bbmap.yaml")
+    log:
+        os.path.join(dir["logs"], "primerB", "{sample}_right_pB.log")
+    benchmark:
+        os.path.join(dir["bench"], "primerB", "{sample}_right_pB.txt")
+    shell:
+        """
+        bbduk.sh \
+        in={input.r1} \
+        in2={input.r2} \
+        ref={input.ref} \
+        out={output.out} \
+        out2={output.out2} \
+        stats={output.stats} \
+        {params}
+        """
+
+
+rule pB_step_3:
+    # potential contamination type 3: Find the forward sequence primer and trim to the right
+    input:
+        r1 = os.path.join(dir["output"], "primerB", "step_2", "{sample}_R1.s2.out.fastq"),
+        r2 = os.path.join(dir["output"], "primerB", "step_2", "{sample}_R2.s2.out.fastq"),
+    output:
+        out = os.path.join(dir["output"], "primerB", "step_3", "{sample}_R1.s3.out.fastq"),
+        out2 = os.path.join(dir["output"], "primerB", "step_3", "{sample}_R2.s3.out.fastq"),
+        stats = os.path.join(dir["output"], "primerB", "step_3", "{sample}_s3.stats"),
+    params:
+        config["qc"]["bbduk"]["s3_and_4"]
+    threads: 8
+    conda:
+        os.path.join(dir["env"], "bbmap.yaml")
+    log:
+        os.path.join(dir["logs"], "primerB", "{sample}_pB_step_3.log")
+    benchmark:
+        os.path.join(dir["bench"], "primerB", "{sample}_pB_step_3.txt")
+    shell:
+        """
+        bbduk.sh \
+        in={input.r1} \
+        in2={input.r2} \
+        literal="CTGTCTCTTATACACATCT" \
+        out={output.out} \
+        out2={output.out2} \
+        stats={output.stats} \
+        {params}
+        """
+
+
+rule pB_step_4:
+    # potential contamination type 4: Find the reverse sequence primer and trim to the right
+    input:
+        r1 = os.path.join(dir["output"], "primerB", "step_3", "{sample}_R1.s3.out.fastq"),
+        r2 = os.path.join(dir["output"], "primerB", "step_3", "{sample}_R2.s3.out.fastq"),
+    output:
+        out = os.path.join(dir["output"], "primerB", "step_4", "{sample}_R1.s4.out.fastq"),
+        out2 = os.path.join(dir["output"], "primerB", "step_4", "{sample}_R2.s4.out.fastq"),
+        stats = os.path.join(dir["output"], "primerB", "step_4", "{sample}_s4.stats"),
+    params:
+        config["qc"]["bbduk"]["s3_and_4"]
+    threads: 8
+    conda:
+        os.path.join(dir["env"], "bbmap.yaml")
+    log:
+        os.path.join(dir["logs"], "primerB", "{sample}_pB_step_4.log")
+    benchmark:
+        os.path.join(dir["bench"], "primerB", "{sample}_pB_step_4.txt")
+    shell:
+        """
+        bbduk.sh \
+        in={input.r1} \
+        in2={input.r2} \
+        literal="CTGTCTCTTCTACACATCT" \
+        out={output.out} \
+        out2={output.out2} \
+        stats={output.stats} \
+        {params}
+        """
 
 
 rule remove_vector_contamination:
     input:
-        r1 = os.path.join(dir["output"], "fastp", "{sample}_R1_trimmed.fastq.gz"),
-        r2 = os.path.join(dir["output"], "fastp", "{sample}_R2_trimmed.fastq.gz"),
+        r1 = os.path.join(dir["output"], "primerB", "step_4", "{sample}_R1.s4.out.fastq"),
+        r2 = os.path.join(dir["output"], "primerB", "step_4", "{sample}_R2.s4.out.fastq"),
         contaminants = os.path.join(dir["db"], "vector_contaminants.fa")
     output:
         r1 = temp(os.path.join(dir["output"], "rm_vector_contamination", "{sample}_R1_rm_vc.fastq.gz")),
