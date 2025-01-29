@@ -6,7 +6,7 @@ fastq_names_2: "{sample}_R2.fastq.gz"
 
 
 viral_db: "/ref/sahlab/data/virus_genome_db/sequences_20241205_4728509.fasta"
-viral_shreds: "/scratch/sahlab/Megan/shred/shreds_all_filtered.fasta"
+viral_shreds: "/ref/sahlab/data/virus_genome_db/viruses_shredded.fasta"
 
 # Pangenome
 #host_ref: "/scratch/sahlab/Megan/pangenome/hprc-v1.0-pggb-filtered.fa" 
