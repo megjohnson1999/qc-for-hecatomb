@@ -7,7 +7,7 @@ rule vir_shred:
         ol = 40,
         med = 80,
         var = 5,
-        min = 20
+        min = 60
     threads: 24
     conda:
         os.path.join(dir["env"], "bbmap.yaml")
