@@ -1,7 +1,10 @@
 # Purpose:
-Subworkflow for if you just want to: 
-- Run the round A/B primer and contaminant removal steps of Hecatomb without any of the other preprocessing steps
-- Get the statistics (which Hecatomb doesn't currently output) for what was removed from each sample
+Preprocessing module for Hecatomb
+- Remove adapters, primers, and vector contamination
+- Merge overlapping read pairs
+- Mask host reference genome for viruses
+- Remove host contamination
+- Report summary statistics for each step
 
 
 # How to run:
