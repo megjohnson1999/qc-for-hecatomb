@@ -4,10 +4,10 @@ rule fastp:
         r1 = os.path.join(config["reads"], config["fastq_names_1"]),
         r2 = os.path.join(config["reads"], config["fastq_names_2"]),
     output:
-        r1 = temp(os.path.join(dir["output"], "fastp", "{sample}_R1_trimmed.fastq.gz")),
-        r2 = temp(os.path.join(dir["output"], "fastp", "{sample}_R2_trimmed.fastq.gz")),
-        stats = os.path.join(dir["output"], "fastp", "{sample}.stats.json"),
-        html = os.path.join(dir["output"], "fastp", "{sample}.stats.html"), 
+        r1 = temp(os.path.join(dir["output"], "qc", "fastp", "{sample}_R1_trimmed.fastq.gz")),
+        r2 = temp(os.path.join(dir["output"], "qc", "fastp", "{sample}_R2_trimmed.fastq.gz")),
+        stats = os.path.join(dir["output"], "qc", "fastp", "{sample}.stats.json"),
+        html = os.path.join(dir["output"], "qc", "fastp", "{sample}.stats.html"), 
     params:
         config["qc"]["fastp"]    
     threads: 12
@@ -35,13 +35,13 @@ rule fastp:
 rule pB_step_1:
     # potential contamination type 1: Find 8 digits of primerB, trim to the left
     input:
-        r1 = os.path.join(dir["output"], "fastp", "{sample}_R1_trimmed.fastq.gz"),
-        r2 = os.path.join(dir["output"], "fastp", "{sample}_R2_trimmed.fastq.gz"), 
-        ref = os.path.join(dir["db"], "last_8digits_primerB.fa"),
+        r1 = os.path.join(dir["output"], "qc", "fastp", "{sample}_R1_trimmed.fastq.gz"),
+        r2 = os.path.join(dir["output"], "qc", "fastp", "{sample}_R2_trimmed.fastq.gz"), 
+        ref = os.path.join(dir["db"], "primerB.fa"),
     output:
-        out = os.path.join(dir["output"], "primerB", "step_1", "{sample}_R1.s1.out.fastq"),
-        out2 = os.path.join(dir["output"], "primerB", "step_1", "{sample}_R2.s1.out.fastq"),
-        stats = os.path.join(dir["output"], "primerB", "step_1", "{sample}_s1.stats"),
+        out = temp(os.path.join(dir["output"], "qc", "step_1", "{sample}_R1.s1.out.fastq.gz")),
+        out2 = temp(os.path.join(dir["output"], "qc", "step_1", "{sample}_R2.s1.out.fastq.gz")),
+        stats = os.path.join(dir["stats"], "qc", "step_1", "{sample}_s1.stats"),
     params:
         config["qc"]["bbduk"]["s1"]
     threads: 8
@@ -67,13 +67,13 @@ rule pB_step_1:
 rule pB_step_2:
     # potential contamination type 2: Find the first 8 digits of rc primerB, trim to the right
     input:
-        r1 = os.path.join(dir["output"], "primerB", "step_1", "{sample}_R1.s1.out.fastq"),
-        r2 = os.path.join(dir["output"], "primerB", "step_1", "{sample}_R2.s1.out.fastq"),
-        ref = os.path.join(dir["db"], "first_8digits_primerB_rc.fa")
+        r1 = os.path.join(dir["output"], "qc", "step_1", "{sample}_R1.s1.out.fastq.gz"),
+        r2 = os.path.join(dir["output"], "qc", "step_1", "{sample}_R2.s1.out.fastq.gz"),
+        ref = os.path.join(dir["db"], "primerB_rc.fa")
     output:
-        out = os.path.join(dir["output"], "primerB", "step_2", "{sample}_R1.s2.out.fastq"),
-        out2 = os.path.join(dir["output"], "primerB", "step_2", "{sample}_R2.s2.out.fastq"),
-        stats = os.path.join(dir["output"], "primerB", "step_2", "{sample}_s2.stats"), 
+        out = temp(os.path.join(dir["output"], "qc", "step_2", "{sample}_R1.s2.out.fastq.gz")),
+        out2 = temp(os.path.join(dir["output"], "qc", "step_2", "{sample}_R2.s2.out.fastq.gz")),
+        stats = os.path.join(dir["stats"], "qc", "step_2", "{sample}_s2.stats"), 
     params:
         config["qc"]["bbduk"]["s2"]
     threads: 8
@@ -96,77 +96,15 @@ rule pB_step_2:
         """
 
 
-rule pB_step_3:
-    # potential contamination type 3: Find the forward sequence primer and trim to the right
-    input:
-        r1 = os.path.join(dir["output"], "primerB", "step_2", "{sample}_R1.s2.out.fastq"),
-        r2 = os.path.join(dir["output"], "primerB", "step_2", "{sample}_R2.s2.out.fastq"),
-    output:
-        out = os.path.join(dir["output"], "primerB", "step_3", "{sample}_R1.s3.out.fastq"),
-        out2 = os.path.join(dir["output"], "primerB", "step_3", "{sample}_R2.s3.out.fastq"),
-        stats = os.path.join(dir["output"], "primerB", "step_3", "{sample}_s3.stats"),
-    params:
-        config["qc"]["bbduk"]["s3_and_4"]
-    threads: 8
-    conda:
-        os.path.join(dir["env"], "bbmap.yaml")
-    log:
-        os.path.join(dir["logs"], "primerB", "{sample}_pB_step_3.log")
-    benchmark:
-        os.path.join(dir["bench"], "primerB", "{sample}_pB_step_3.txt")
-    shell:
-        """
-        bbduk.sh \
-        in={input.r1} \
-        in2={input.r2} \
-        literal="CTGTCTCTTATACACATCT" \
-        out={output.out} \
-        out2={output.out2} \
-        stats={output.stats} \
-        {params}
-        """
-
-
-rule pB_step_4:
-    # potential contamination type 4: Find the reverse sequence primer and trim to the right
-    input:
-        r1 = os.path.join(dir["output"], "primerB", "step_3", "{sample}_R1.s3.out.fastq"),
-        r2 = os.path.join(dir["output"], "primerB", "step_3", "{sample}_R2.s3.out.fastq"),
-    output:
-        out = os.path.join(dir["output"], "primerB", "step_4", "{sample}_R1.s4.out.fastq"),
-        out2 = os.path.join(dir["output"], "primerB", "step_4", "{sample}_R2.s4.out.fastq"),
-        stats = os.path.join(dir["output"], "primerB", "step_4", "{sample}_s4.stats"),
-    params:
-        config["qc"]["bbduk"]["s3_and_4"]
-    threads: 8
-    conda:
-        os.path.join(dir["env"], "bbmap.yaml")
-    log:
-        os.path.join(dir["logs"], "primerB", "{sample}_pB_step_4.log")
-    benchmark:
-        os.path.join(dir["bench"], "primerB", "{sample}_pB_step_4.txt")
-    shell:
-        """
-        bbduk.sh \
-        in={input.r1} \
-        in2={input.r2} \
-        literal="CTGTCTCTTCTACACATCT" \
-        out={output.out} \
-        out2={output.out2} \
-        stats={output.stats} \
-        {params}
-        """
-
-
 rule remove_vector_contamination:
     input:
-        r1 = os.path.join(dir["output"], "primerB", "step_4", "{sample}_R1.s4.out.fastq"),
-        r2 = os.path.join(dir["output"], "primerB", "step_4", "{sample}_R2.s4.out.fastq"),
+        r1 = os.path.join(dir["output"], "qc", "step_2", "{sample}_R1.s2.out.fastq.gz"),
+        r2 = os.path.join(dir["output"], "qc", "step_2", "{sample}_R2.s2.out.fastq.gz"),
         contaminants = os.path.join(dir["db"], "vector_contaminants.fa")
     output:
-        r1 = temp(os.path.join(dir["output"], "rm_vector_contamination", "{sample}_R1_rm_vc.fastq.gz")),
-        r2 = temp(os.path.join(dir["output"], "rm_vector_contamination", "{sample}_R2_rm_vc.fastq.gz")),
-        stats = os.path.join(dir["stats"], "rm_vector_contamination", "{sample}_rm_vc.stats"),
+        r1 = os.path.join(dir["output"], "qc", "rm_vector_contamination", "{sample}_R1_rm_vc.fastq.gz"),
+        r2 = os.path.join(dir["output"], "qc", "rm_vector_contamination", "{sample}_R2_rm_vc.fastq.gz"),
+        stats = os.path.join(dir["stats"], "qc", "rm_vector_contamination", "{sample}_rm_vc.stats"),
     params:
         config["qc"]["bbduk"]["rm_vc"]
     threads: 24
@@ -189,46 +127,17 @@ rule remove_vector_contamination:
         threads={threads} \
         2> {log}
         """
-
-rule remove_low_quality:
-    input:
-        r1 = os.path.join(dir["output"], "rm_vector_contamination", "{sample}_R1_rm_vc.fastq.gz"),
-        r2 = os.path.join(dir["output"], "rm_vector_contamination", "{sample}_R2_rm_vc.fastq.gz"),
-    output:
-        r1 = temp(os.path.join(dir["output"], "rm_low_quality", "{sample}_R1_rm_lq.fastq.gz")),
-        r2 = temp(os.path.join(dir["output"], "rm_low_quality", "{sample}_R2_rm_lq.fastq.gz")),
-        stats = os.path.join(dir["stats"], "rm_low_quality", "{sample}_low_quality.stats"),
-    params:
-        config["qc"]["bbduk"]["rm_lq"]
-    threads: 24
-    conda:
-        os.path.join(dir["env"], "bbmap.yaml")
-    log:
-        os.path.join(dir["logs"], "remove_low_quality", "{sample}_remove_low_quality.log")
-    benchmark:
-        os.path.join(dir["bench"], "remove_low_quality", "{sample}_remove_low_quality.txt")
-    shell:
-        """
-        bbduk.sh \
-        in={input.r1} \
-        in2={input.r2} \
-        out={output.r1} \
-        out2={output.r2} \
-        stats={output.stats} \
-        threads={threads} \
-        {params} \
-        2> {log}
-        """
-
+        
 
 rule bbmerge:
     input:
-        r1 = os.path.join(dir["output"], "rm_low_quality", "{sample}_R1_rm_lq.fastq.gz"),
-        r2 = os.path.join(dir["output"], "rm_low_quality", "{sample}_R2_rm_lq.fastq.gz"),
+        r1 = os.path.join(dir["output"], "qc", "rm_vector_contamination", "{sample}_R1_rm_vc.fastq.gz"),
+        r2 = os.path.join(dir["output"], "qc", "rm_vector_contamination", "{sample}_R2_rm_vc.fastq.gz"),
     output:
         merged = os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"),
         unmerged1 = os.path.join(dir["output"], "bbmerge", "{sample}_R1_unmerged.fastq.gz"),
         unmerged2 = os.path.join(dir["output"], "bbmerge", "{sample}_R2_unmerged.fastq.gz"),
+        hist = os.path.join(dir["stats"], "bbmerge", "{sample}_bbmerge.out")
     params:
         config["qc"]["bbmerge"]
     threads: 24
@@ -246,6 +155,80 @@ rule bbmerge:
         out={output.merged} \
         outu1={output.unmerged1} \
         outu2={output.unmerged2} \
+        ihist={output.hist} \
         {params} \
         &> {log}
         """
+
+rule index_host:
+    input:
+        config["host_ref_masked"]
+    output:
+        config["host_ref_indexed"]
+    threads: 12
+    conda:
+        os.path.join(dir["env"], "minimap.yaml") 
+    shell:
+        """
+        minimap2 -d {output} {input}
+        """
+
+
+rule host_removal:
+    input:
+        merged = os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"),
+        unmerged1 = os.path.join(dir["output"], "bbmerge", "{sample}_R1_unmerged.fastq.gz"),
+        unmerged2 = os.path.join(dir["output"], "bbmerge", "{sample}_R2_unmerged.fastq.gz"),
+        index = config["host_ref_indexed"]
+    output:
+        merged_bam = temp(os.path.join(dir["output"], "host_removed", "{sample}_merged.bam")),
+        merged_hr = os.path.join(dir["output"], "host_removed", "{sample}_merged_hr.fastq.gz"),
+        unmerged_bam = temp(os.path.join(dir["output"], "host_removed", "{sample}_unmerged.bam")),
+        unmerged_bam_sorted = temp(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_sorted.bam")),
+        unmerged1_hr = os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R1.fastq.gz"),
+        unmerged2_hr = os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R2.fastq.gz"),
+    threads: 24
+    conda:
+        os.path.join(dir["env"], "minimap.yaml") 
+    log:
+        os.path.join(dir["logs"], "host_removal", "{sample}_hr.log")
+    benchmark:
+        os.path.join(dir["bench"], "host_removal", "{sample}_hr.txt")
+    shell:
+        """
+        # Merged reads
+        minimap2 -ax sr {input.index} {input.merged} \
+            | samtools view -bh -f 4 -F 256 \
+            | samtools sort -o {output.merged_bam}
+        samtools index {output.merged_bam}
+
+        samtools fastq {output.merged_bam} | gzip -c > {output.merged_hr} 
+
+        # Unmerged pairs
+        minimap2 -ax sr {input.index} {input.unmerged1} {input.unmerged2} \
+            | samtools view -bh \
+            | samtools sort -o {output.unmerged_bam}
+        samtools index {output.unmerged_bam} 
+
+        samtools view -u -f 12 -F 256 {output.unmerged_bam} \
+            | samtools sort -n -o {output.unmerged_bam_sorted}
+
+        samtools fastq -1 {output.unmerged1_hr} -2 {output.unmerged2_hr} \
+        -0 /dev/null -s /dev/null \
+        -n {output.unmerged_bam_sorted}      
+
+        """
+
+
+#rule preprocessing_stats:
+#    input:
+#        fastp = expand(),
+#        s1 = expand(),
+#        s2 = expand(),
+#        rm_vc = expand(),
+#        bbmerge = 
+#    output:
+#        fastp =
+#        stats = os.path.join(dir["stats"], "qc", "qc_summary.stats"),
+#    conda:
+#    shell:

@@ -2,7 +2,7 @@ rule vir_shred:
     input:
         config["viral_db"]
     output:
-        temp(os.path.join(dir["temp"], "virus_shreds.fa"))
+        config["viral_shreds"]
     params:
         ol = 40,
         med = 80,
@@ -29,7 +29,7 @@ rule vir_shred:
 
 rule map_shreds:
     input:
-        shreds = os.path.join(dir["temp"], "virus_shreds.fa"),
+        shreds = config["viral_shreds"],
         ref = config["host_ref"]
     output:
         os.path.join(dir["temp"], "mapped_to_host.sam")

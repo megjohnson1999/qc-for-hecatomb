@@ -19,7 +19,7 @@ rule summary_stats:
         r2_all = expand(os.path.join(config["reads"], config["fastq_names_2"]), sample=SAMPLES),
         lint = expand(os.path.join(dir["logs"],"lint","{sample}.lint"), sample=SAMPLES)
     output:
-        os.path.join(dir["stats"], "initial_summary.txt")
+        os.path.join(dir["stats"], "raw_input_data", "basic_stats.txt")
     conda:
         os.path.join(dir["env"], "seqkit.yaml")
     shell:
@@ -33,10 +33,10 @@ rule fastqc:
         r1 = expand(os.path.join(config["reads"], config["fastq_names_1"]), sample=SAMPLES),
         r2 = expand(os.path.join(config["reads"], config["fastq_names_2"]), sample=SAMPLES),
     output:
-        fastqc_r1 = expand(os.path.join(dir["results"], "fastqc", "{sample}_R1_fastqc.html"), sample=SAMPLES),
-        fastqc_r2 = expand(os.path.join(dir["results"], "fastqc", "{sample}_R2_fastqc.html"), sample=SAMPLES),
+        fastqc_r1 = temp(expand(os.path.join(dir["results"], "output", "fastqc", "{sample}_R1_fastqc.html"), sample=SAMPLES)),
+        fastqc_r2 = temp(expand(os.path.join(dir["results"], "output", "fastqc", "{sample}_R2_fastqc.html"), sample=SAMPLES)),
     params:
-        outdir=os.path.join(dir["results"], "fastqc")
+        outdir=os.path.join(dir["results"], "output", "fastqc")
     conda:
         os.path.join(dir["env"], "fastqc.yaml")
     shell:
@@ -47,13 +47,13 @@ rule fastqc:
 rule multiqc:
     """Get a report that consolidates the results for all samples"""
     input:
-        expand(os.path.join(dir["results"], "fastqc", "{sample}_R1_fastqc.html"), sample=SAMPLES),
-        expand(os.path.join(dir["results"], "fastqc", "{sample}_R2_fastqc.html"), sample=SAMPLES),
+        expand(os.path.join(dir["results"], "output", "fastqc", "{sample}_R1_fastqc.html"), sample=SAMPLES),
+        expand(os.path.join(dir["results"], "output", "fastqc", "{sample}_R2_fastqc.html"), sample=SAMPLES),
     output:
-        os.path.join(dir["stats"], "multiqc_report.html")
+        os.path.join(dir["stats"], "raw_input_data", "multiqc_report.html")
     params:
-        fastqc = os.path.join(dir["results"], "fastqc"),
-        outdir = dir["stats"]
+        fastqc = os.path.join(dir["results"], "output", "fastqc"),
+        outdir = os.path.join(dir["stats"], "raw_input_data"),
     conda:
         os.path.join(dir["env"], "multiqc.yaml")
     shell:
@@ -61,3 +61,4 @@ rule multiqc:
         multiqc {params.fastqc} -o {params.outdir}
         #mv {params.fastqc}/multiqc_report.html {params.outdir} 
         """
+ 
