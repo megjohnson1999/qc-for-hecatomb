@@ -1,13 +1,23 @@
 reads:
-output: "out"
+output: "hecatomb-qc.out"
 log:
 fastq_names_1: "{sample}_R1.fastq.gz"
 fastq_names_2: "{sample}_R2.fastq.gz"
 
 
 viral_db: "/ref/sahlab/data/virus_genome_db/sequences_20241205_4728509.fasta"
+viral_shreds: "/scratch/sahlab/Megan/shred/shreds_all_filtered.fasta"
+
+# Pangenome
+#host_ref: "/scratch/sahlab/Megan/pangenome/hprc-v1.0-pggb-filtered.fa" 
+#host_ref_masked: "/scratch/sahlab/Megan/pangenome/masked_pan_ref.fa"
+#host_ref_indexed: "/scratch/sahlab/Megan/pangenome/masked_pan_index.mmi"
+
+# T2T
 host_ref: "/ref/sahlab/data/human_T2T/data/GCF_009914755.1/GCF_009914755.1_T2T-CHM13v2.0_genomic.fna"
-host_ref_masked: "/ref/sahlab/data/human_T2T/masked.fa"  
+host_ref_masked: "/ref/sahlab/data/human_T2T/masked.fa"
+host_ref_indexed: "/ref/sahlab/data/human_T2T/masked_index.mmi"
+
 
 qc:
     fastp:
@@ -22,19 +32,15 @@ qc:
     bbduk:
         s1:
           ktrim=l
-          k=8
+          k=16
+          mink=8
           rcomp=f
           ordered=t
           ow=t
         s2:
           ktrim=r
-          k=8
-          rcomp=f
-          ordered=t
-          ow=t
-        s3_and_4:
-          ktrim=r
-          k=19
+          k=16
+          mink=8
           rcomp=f
           ordered=t
           ow=t
@@ -43,14 +49,6 @@ qc:
           hammingdistance=1
           ordered=t
           ow=t
-        rm_lq:
-          ordered=t
-          qtrim=r
-          maxns=2
-          entropy=0.5
-          entropywindow=25
-          trimq=15
-          minlength=90
     bbmerge:
         minoverlap=20
     
