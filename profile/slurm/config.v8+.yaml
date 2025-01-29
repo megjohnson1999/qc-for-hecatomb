@@ -26,4 +26,10 @@ set-resources:
     pB_step_3:
         mem: 24G
     pB_step_4:
-        mem: 24G 
+        mem: 24G
+    mask_host:
+        mem: 64G
+    index_host:
+        mem: 64G
+    host_removal:
+        mem: 64G 
