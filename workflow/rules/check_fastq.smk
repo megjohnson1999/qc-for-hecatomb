@@ -30,11 +30,11 @@ rule summary_stats:
 rule fastqc:
     """Perform fastqc on the input data"""
     input:
-        r1 = expand(os.path.join(config["reads"], config["fastq_names_1"]), sample=SAMPLES),
-        r2 = expand(os.path.join(config["reads"], config["fastq_names_2"]), sample=SAMPLES),
+        r1 = os.path.join(config["reads"], config["fastq_names_1"]),
+        r2 = os.path.join(config["reads"], config["fastq_names_2"]),
     output:
-        fastqc_r1 = temp(expand(os.path.join(dir["results"], "output", "fastqc", "{sample}_R1_fastqc.html"), sample=SAMPLES)),
-        fastqc_r2 = temp(expand(os.path.join(dir["results"], "output", "fastqc", "{sample}_R2_fastqc.html"), sample=SAMPLES)),
+        fastqc_r1 = os.path.join(dir["results"], "output", "fastqc", f"{config['fastq_names_1']}_fastqc.html"),
+        fastqc_r2 = os.path.join(dir["results"], "output", "fastqc", f"{config['fastq_names_2']}_fastqc.html"),
     params:
         outdir=os.path.join(dir["results"], "output", "fastqc")
     conda:
@@ -47,8 +47,8 @@ rule fastqc:
 rule multiqc:
     """Get a report that consolidates the results for all samples"""
     input:
-        expand(os.path.join(dir["results"], "output", "fastqc", "{sample}_R1_fastqc.html"), sample=SAMPLES),
-        expand(os.path.join(dir["results"], "output", "fastqc", "{sample}_R2_fastqc.html"), sample=SAMPLES),
+        expand(os.path.join(dir["results"], "output", "fastqc", f"{config['fastq_names_1']}_fastqc.html"), sample=SAMPLES),
+        expand(os.path.join(dir["results"], "output", "fastqc", f"{config['fastq_names_2']}_fastqc.html"), sample=SAMPLES),
     output:
         os.path.join(dir["stats"], "raw_input_data", "multiqc_report.html")
     params:
