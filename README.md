@@ -7,6 +7,10 @@ Preprocessing module for Hecatomb
 - Report summary statistics for each step
 
 
+Workflow:
+
+![hecatomb-qc-0217](https://github.com/user-attachments/assets/ea29a2c3-2e05-4d0c-84f1-33beb60dfe74)
+
 # How to run:
 - Git clone this repository
 - Run from an environment with Snakemake version 8+, [mamba](https://anaconda.org/conda-forge/mamba), and [snakemake-executor-plugin-slurm](https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html)
