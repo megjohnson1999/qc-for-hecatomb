@@ -1,0 +1,8 @@
+name: fastp_stats_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python
+  - pandas
