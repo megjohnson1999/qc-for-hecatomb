@@ -38,9 +38,10 @@ rule all:
     input:
         #expand(os.path.join(dir["output"],"{sample}_R2.fastq.gz"), sample = SAMPLES),
         os.path.join(dir["stats"], "raw_input_data", "basic_stats.txt"),
-        os.path.join(dir["stats"], "raw_input_data", "multiqc_report.html"),
+        #os.path.join(dir["stats"], "raw_input_data", "multiqc_report.html"),
         #expand(os.path.join(dir["output"], "fastp", "{sample}_R2_trimmed.fastq.gz"), sample = SAMPLES),
-        #expand(os.path.join(dir["stats"], "rm_vector_contamination", "{sample}_rm_vc.stats"), sample = SAMPLES)
-        expand(os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"), sample = SAMPLES),
+        os.path.join(dir["stats"], "qc", "fastp_stats.tsv"),
+        #expand(os.path.join(dir["stats"], "rm_vector_contamination", "{sample}_rm_vc.stats"), sample = SAMPLES),
+        #expand(os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"), sample = SAMPLES),
         expand(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R1.fastq.gz"), sample = SAMPLES),
     default_target: True

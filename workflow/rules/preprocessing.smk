@@ -6,8 +6,8 @@ rule fastp:
     output:
         r1 = temp(os.path.join(dir["output"], "qc", "fastp", "{sample}_R1_trimmed.fastq.gz")),
         r2 = temp(os.path.join(dir["output"], "qc", "fastp", "{sample}_R2_trimmed.fastq.gz")),
-        stats = os.path.join(dir["output"], "qc", "fastp", "{sample}.stats.json"),
-        html = os.path.join(dir["output"], "qc", "fastp", "{sample}.stats.html"), 
+        stats = temp(os.path.join(dir["output"], "qc", "fastp", "{sample}.stats.json")),
+        html = temp(os.path.join(dir["output"], "qc", "fastp", "{sample}.stats.html")), 
     params:
         config["qc"]["fastp"]    
     threads: 12
@@ -30,6 +30,17 @@ rule fastp:
         {params} \
         &> {log}
         """
+
+
+rule fastp_summary:
+    input:
+        expand(os.path.join(dir["output"], "qc", "fastp", "{sample}.stats.json"), sample = SAMPLES)
+    output:
+        os.path.join(dir["stats"], "qc", "fastp_stats.tsv")
+    conda:
+        os.path.join(dir["env"], "pandas.yaml")
+    script:
+        "../scripts/fastp_stats.py"
 
 
 rule pB_step_1:
