@@ -1,0 +1,69 @@
+---
+title: "Results of preprocessing"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Import libraries
+library(readr)
+library(tidyverse)
+```
+
+Adapters trimmed by fastp
+```{r, include=FALSE}
+# Read in the data
+fastp_path <- file.path(snakemake@input[["fastp"]])
+fastp <- read_tsv(fastp_path) %>%
+  mutate(percent_adapter_trimmed = (adapter_cutting.adapter_trimmed_reads/summary.before_filtering.total_reads)*100)
+```
+
+```{r, echo=FALSE}
+# Create the boxplot
+ggplot(fastp, aes(x="", y=percent_adapter_trimmed))+
+  geom_boxplot(outlier.shape=NA)+
+  geom_jitter(width=0.2) +
+  theme_bw() +
+  ylab("Percent of reads trimmed") +
+  xlab("") +
+  labs(title="Adapter trimming")
+```
+
+
+Placeholder for primerB plot
+```{r, include=FALSE}
+# Read in the data
+```
+
+```{r, echo=FALSE}
+# Create the plot
+```
+
+Placeholder for vector contamination info
+```{r, include=FALSE}
+# Read in the data
+```
+
+```{r, echo=FALSE}
+# Create the plot
+```
+
+Placeholder for bbmerge plot
+```{r, include=FALSE}
+# Read in the data
+```
+
+```{r, echo=FALSE}
+# Create the plot
+```
+
+Placeholder for host removal plot
+```{r, include=FALSE}
+# Read in the data
+```
+
+```{r, echo=FALSE}
+# Create the plot
+```

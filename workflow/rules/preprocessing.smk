@@ -231,15 +231,12 @@ rule host_removal:
         """
 
 
-#rule preprocessing_stats:
-#    input:
-#        fastp = expand(),
-#        s1 = expand(),
-#        s2 = expand(),
-#        rm_vc = expand(),
-#        bbmerge = 
-#    output:
-#        fastp =
-#        stats = os.path.join(dir["stats"], "qc", "qc_summary.stats"),
-#    conda:
-#    shell:
+rule preprocessing_plots:
+    input:
+        fastp = os.path.join(dir["stats"], "qc", "fastp_stats.tsv"),
+    output:
+        os.path.join(dir["stats"], "qc", "preprocessing_plots.html"),
+    conda:
+        os.path.join(dir["env"], "R_env.yaml")
+    script:
+        "../scripts/preprocessing_plots.Rmd"
