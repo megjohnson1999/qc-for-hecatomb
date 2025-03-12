@@ -231,9 +231,57 @@ rule host_removal:
         """
 
 
+rule primer_b_summary:
+    input:
+        step1 = expand(os.path.join(dir["stats"], "qc", "step_1", "{sample}_s1.stats"), sample = SAMPLES),
+        step2 = expand(os.path.join(dir["stats"], "qc", "step_2", "{sample}_s2.stats"), sample = SAMPLES)
+    output:
+        os.path.join(dir["stats"], "qc", "primer_b_stats.tsv")
+    conda:
+        os.path.join(dir["env"], "pandas.yaml")
+    script:
+        "../scripts/primer_b_stats.py"
+
+rule vector_stats_summary:
+    input:
+        expand(os.path.join(dir["stats"], "qc", "rm_vector_contamination", "{sample}_rm_vc.stats"), sample = SAMPLES)
+    output:
+        os.path.join(dir["stats"], "qc", "vector_stats.tsv")
+    conda:
+        os.path.join(dir["env"], "pandas.yaml")
+    script:
+        "../scripts/vector_stats.py"
+
+rule bbmerge_summary:
+    input:
+        expand(os.path.join(dir["stats"], "bbmerge", "{sample}_bbmerge.out"), sample = SAMPLES)
+    output:
+        stats = os.path.join(dir["stats"], "qc", "bbmerge_stats.tsv"),
+        hist = os.path.join(dir["stats"], "qc", "bbmerge_insert_hist.tsv")
+    conda:
+        os.path.join(dir["env"], "pandas.yaml")
+    script:
+        "../scripts/bbmerge_stats.py"
+
+rule host_removal_summary:
+    input:
+        merged_bam = expand(os.path.join(dir["output"], "host_removed", "{sample}_merged.bam"), sample = SAMPLES),
+        unmerged_bam = expand(os.path.join(dir["output"], "host_removed", "{sample}_unmerged.bam"), sample = SAMPLES)
+    output:
+        os.path.join(dir["stats"], "qc", "host_removal_stats.tsv")
+    conda:
+        os.path.join(dir["env"], "pandas.yaml")
+    script:
+        "../scripts/host_removal_stats.py"
+
 rule preprocessing_plots:
     input:
         fastp = os.path.join(dir["stats"], "qc", "fastp_stats.tsv"),
+        primer_b = os.path.join(dir["stats"], "qc", "primer_b_stats.tsv"),
+        vector = os.path.join(dir["stats"], "qc", "vector_stats.tsv"),
+        bbmerge = os.path.join(dir["stats"], "qc", "bbmerge_stats.tsv"),
+        bbmerge_hist = os.path.join(dir["stats"], "qc", "bbmerge_insert_hist.tsv"),
+        host = os.path.join(dir["stats"], "qc", "host_removal_stats.tsv")
     output:
         os.path.join(dir["stats"], "qc", "preprocessing_plots.html"),
     conda:

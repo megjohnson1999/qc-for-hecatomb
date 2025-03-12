@@ -10,9 +10,10 @@ knitr::opts_chunk$set(echo = TRUE)
 # Import libraries
 library(readr)
 library(tidyverse)
+library(gridExtra)
 ```
 
-Adapters trimmed by fastp
+## Adapters trimmed by fastp
 ```{r, include=FALSE}
 # Read in the data
 fastp_path <- file.path(snakemake@input[["fastp"]])
@@ -20,7 +21,7 @@ fastp <- read_tsv(fastp_path) %>%
   mutate(percent_adapter_trimmed = (adapter_cutting.adapter_trimmed_reads/summary.before_filtering.total_reads)*100)
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, warning=FALSE}
 # Create the boxplot
 ggplot(fastp, aes(x="", y=percent_adapter_trimmed))+
   geom_boxplot(outlier.shape=NA)+
@@ -31,39 +32,251 @@ ggplot(fastp, aes(x="", y=percent_adapter_trimmed))+
   labs(title="Adapter trimming")
 ```
 
-
-Placeholder for primerB plot
+## PrimerB contamination removal
 ```{r, include=FALSE}
 # Read in the data
+primer_b_path <- file.path(snakemake@input[["primer_b"]])
+primer_b <- read_tsv(primer_b_path)
 ```
 
-```{r, echo=FALSE}
-# Create the plot
+```{r, echo=FALSE, warning=FALSE}
+# Create plots for PrimerB and PrimerB_rc
+p1 <- ggplot(primer_b, aes(x="", y=percent_with_primerB))+
+  geom_boxplot(outlier.shape=NA)+
+  geom_jitter(width=0.2) +
+  theme_bw() +
+  ylab("Percent of reads") +
+  xlab("") +
+  labs(title="PrimerB contamination")
+
+p2 <- ggplot(primer_b, aes(x="", y=percent_with_primerB_rc))+
+  geom_boxplot(outlier.shape=NA)+
+  geom_jitter(width=0.2) +
+  theme_bw() +
+  ylab("Percent of reads") +
+  xlab("") +
+  labs(title="PrimerB_rc contamination")
+
+# Display the plots side by side
+grid.arrange(p1, p2, ncol=2)
+
+# Plot total PrimerB contamination
+ggplot(primer_b, aes(x="", y=percent_total_primerB))+
+  geom_boxplot(outlier.shape=NA)+
+  geom_jitter(width=0.2) +
+  theme_bw() +
+  ylab("Percent of reads with PrimerB") +
+  xlab("") +
+  labs(title="Total PrimerB contamination")
 ```
 
-Placeholder for vector contamination info
+## Vector contamination removal
 ```{r, include=FALSE}
 # Read in the data
+vector_path <- file.path(snakemake@input[["vector"]])
+vector <- read_tsv(vector_path)
 ```
 
-```{r, echo=FALSE}
-# Create the plot
+```{r, echo=FALSE, warning=FALSE}
+# Create the plot for vector contamination
+ggplot(vector, aes(x="", y=percent_with_vector))+
+  geom_boxplot(outlier.shape=NA)+
+  geom_jitter(width=0.2) +
+  theme_bw() +
+  ylab("Percent of reads with vector") +
+  xlab("") +
+  labs(title="Vector contamination")
+
+# Plot top vector types if available
+if ("top1_vector" %in% colnames(vector)) {
+  # Gather the top vector data
+  top_vectors <- vector %>%
+    select(sample, contains("top"), -contains("percent")) %>%
+    pivot_longer(
+      cols = contains("top"),
+      names_to = c("rank", "type"),
+      names_pattern = "top(\\d+)_(vector|count)",
+      values_to = "value"
+    ) %>%
+    pivot_wider(
+      names_from = type,
+      values_from = value
+    ) %>%
+    filter(!is.na(vector) & !is.na(count) & count > 0)
+  
+  if (nrow(top_vectors) > 0) {
+    # Plot the top vectors
+    ggplot(top_vectors, aes(x = reorder(vector, -count), y = count)) +
+      geom_bar(stat = "identity") +
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+      labs(title = "Most common vector contaminants", x = "Vector", y = "Count")
+  }
+}
 ```
 
-Placeholder for bbmerge plot
+## BBMerge read merging statistics
 ```{r, include=FALSE}
 # Read in the data
+bbmerge_path <- file.path(snakemake@input[["bbmerge"]])
+bbmerge <- read_tsv(bbmerge_path)
+
+# Read in the histogram data
+bbmerge_hist_path <- file.path(snakemake@input[["bbmerge_hist"]])
+bbmerge_hist <- read_tsv(bbmerge_hist_path)
 ```
 
-```{r, echo=FALSE}
-# Create the plot
+```{r, echo=FALSE, warning=FALSE}
+# Create the plot for percent merged
+ggplot(bbmerge, aes(x="", y=percent_merged))+
+  geom_boxplot(outlier.shape=NA)+
+  geom_jitter(width=0.2) +
+  theme_bw() +
+  ylab("Percent of read pairs merged") +
+  xlab("") +
+  labs(title="Read merging rate")
+
+# Create a plot for average insert size
+ggplot(bbmerge, aes(x="", y=avg_insert_size))+
+  geom_boxplot(outlier.shape=NA)+
+  geom_jitter(width=0.2) +
+  theme_bw() +
+  ylab("Average insert size (bp)") +
+  xlab("") +
+  labs(title="Insert size distribution")
+
+# Create insert size histogram for a representative sample
+# First, melt the histogram data
+bbmerge_hist_long <- bbmerge_hist %>%
+  rownames_to_column(var = "insert_size") %>%
+  mutate(insert_size = as.numeric(insert_size)) %>%
+  pivot_longer(
+    cols = -insert_size,
+    names_to = "sample",
+    values_to = "count"
+  ) %>%
+  filter(count > 0 & insert_size > 0 & insert_size < 1000)  # Filter out zeros and extreme values
+
+# Select a representative sample (highest total count)
+sample_counts <- bbmerge_hist_long %>%
+  group_by(sample) %>%
+  summarize(total = sum(count)) %>%
+  arrange(desc(total))
+
+if (nrow(sample_counts) > 0) {
+  rep_sample <- sample_counts$sample[1]
+  
+  # Plot the histogram for the representative sample
+  bbmerge_hist_long %>%
+    filter(sample == rep_sample) %>%
+    ggplot(aes(x = insert_size, y = count)) +
+    geom_line() +
+    theme_bw() +
+    labs(
+      title = paste("Insert size distribution for sample", rep_sample),
+      x = "Insert size (bp)",
+      y = "Count"
+    )
+}
 ```
 
-Placeholder for host removal plot
+## Host removal statistics
 ```{r, include=FALSE}
 # Read in the data
+host_path <- file.path(snakemake@input[["host"]])
+host <- read_tsv(host_path)
 ```
 
-```{r, echo=FALSE}
-# Create the plot
+```{r, echo=FALSE, warning=FALSE}
+# Create plots for host removal
+p1 <- ggplot(host, aes(x="", y=percent_host_in_merged))+
+  geom_boxplot(outlier.shape=NA)+
+  geom_jitter(width=0.2) +
+  theme_bw() +
+  ylab("Percent host reads") +
+  xlab("") +
+  labs(title="Host DNA in merged reads")
+
+p2 <- ggplot(host, aes(x="", y=percent_host_in_unmerged))+
+  geom_boxplot(outlier.shape=NA)+
+  geom_jitter(width=0.2) +
+  theme_bw() +
+  ylab("Percent host reads") +
+  xlab("") +
+  labs(title="Host DNA in unmerged reads")
+
+# Display the plots side by side
+grid.arrange(p1, p2, ncol=2)
+
+# Plot overall host contamination
+ggplot(host, aes(x="", y=percent_host_overall))+
+  geom_boxplot(outlier.shape=NA)+
+  geom_jitter(width=0.2) +
+  theme_bw() +
+  ylab("Percent of reads mapped to host") +
+  xlab("") +
+  labs(title="Overall host contamination")
+```
+
+## Summary of preprocessing
+```{r, echo=FALSE, warning=FALSE}
+# Create a summary table of all preprocessing steps
+summary_data <- data.frame(
+  Step = c(
+    "Adapter trimming (fastp)", 
+    "PrimerB contamination", 
+    "Vector contamination", 
+    "Reads merged (BBMerge)", 
+    "Host contamination"
+  ),
+  Mean_percent = c(
+    mean(fastp$percent_adapter_trimmed),
+    mean(primer_b$percent_total_primerB),
+    mean(vector$percent_with_vector),
+    mean(bbmerge$percent_merged),
+    mean(host$percent_host_overall)
+  ),
+  Median_percent = c(
+    median(fastp$percent_adapter_trimmed),
+    median(primer_b$percent_total_primerB),
+    median(vector$percent_with_vector),
+    median(bbmerge$percent_merged),
+    median(host$percent_host_overall)
+  ),
+  Min_percent = c(
+    min(fastp$percent_adapter_trimmed),
+    min(primer_b$percent_total_primerB),
+    min(vector$percent_with_vector),
+    min(bbmerge$percent_merged),
+    min(host$percent_host_overall)
+  ),
+  Max_percent = c(
+    max(fastp$percent_adapter_trimmed),
+    max(primer_b$percent_total_primerB),
+    max(vector$percent_with_vector),
+    max(bbmerge$percent_merged),
+    max(host$percent_host_overall)
+  )
+)
+
+# Format percentages to two decimal places
+summary_data[, 2:5] <- round(summary_data[, 2:5], 2)
+
+# Add a row for the final "kept reads" percentage (estimate)
+kept_percent <- 100 - mean(host$percent_host_overall)
+summary_data <- rbind(
+  summary_data,
+  data.frame(
+    Step = "Reads kept after all steps (estimate)",
+    Mean_percent = round(kept_percent, 2),
+    Median_percent = NA,
+    Min_percent = NA,
+    Max_percent = NA
+  )
+)
+
+# Display the summary table
+knitr::kable(summary_data, 
+             caption = "Summary statistics for preprocessing steps",
+             col.names = c("Preprocessing step", "Mean %", "Median %", "Min %", "Max %"))
 ```
