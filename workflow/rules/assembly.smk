@@ -64,7 +64,7 @@ rule megahit_assembly:
     params:
         min_contig = 1000,
         out_dir = os.path.join(dir["output"], "assembly", "megahit")
-    threads: 48
+    threads: 24
     conda:
         os.path.join(dir["env"], "megahit.yaml")
     log:
