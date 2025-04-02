@@ -36,8 +36,8 @@ ggplot(fastp_clean, aes(x="", y=percent_adapter_trimmed))+
   labs(title="Adapter trimming")
 ```
 
-## PrimerB contamination removal (Claude's code)
-```{r, echo=FALSE}
+## PrimerB contamination removal
+```{r, echo=FALSE, warning=FALSE}
 # Read in the data
 primer_b_path <- file.path(snakemake@input[["primer_b"]])
 primer_b <- read_tsv(primer_b_path)
@@ -87,66 +87,6 @@ ggplot(primer_b_clean, aes(x="", y=percent_total_primerB)) +
   xlab("") +
   scale_y_continuous(limits = c(0, max_percent)) +  # Adjusted scale
   labs(title="Total PrimerB contamination")
-
-# Approach 2: Ranked bar chart (for seeing individual samples)
-# Focus on total PrimerB contamination
-top_samples <- primer_b_clean %>%
-  arrange(desc(percent_total_primerB)) %>%
-  mutate(rank = row_number(),
-         sample_short = ifelse(nchar(sample) > 15, 
-                              paste0(substr(sample, 1, 12), "..."), 
-                              sample)) %>%
-  # If too many samples, limit to top 30
-  filter(rank <= min(30, n()))
-
-# Create horizontal bar chart
-ggplot(top_samples, aes(x = reorder(sample_short, percent_total_primerB), 
-                       y = percent_total_primerB)) +
-  geom_col(fill = "steelblue") +
-  geom_text(aes(label = sprintf("%.3f%%", percent_total_primerB)), 
-            hjust = -0.1, size = 3) +
-  coord_flip() +
-  theme_bw() +
-  theme(
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor = element_blank()
-  ) +
-  labs(
-    title = "Top Samples by Total PrimerB Contamination",
-    x = NULL,
-    y = "Percent of reads (%)"
-  )
-
-# Approach 3: Log scale visualization (especially good for very small values)
-# Create log scale boxplots
-p1_log <- ggplot(primer_b_clean, aes(x="", y=percent_with_primerB)) +
-  geom_boxplot(outlier.shape=NA) +
-  geom_jitter(width=0.2, alpha=0.6) +
-  theme_bw() +
-  scale_y_log10(
-    labels = scales::percent_format(scale = 1),
-    breaks = scales::trans_breaks("log10", function(x) 10^x)(c(0.01, max_percent))
-  ) +
-  annotation_logticks(sides = "l") +
-  ylab("Percent of reads (log scale)") +
-  xlab("") +
-  labs(title="PrimerB contamination (log scale)")
-
-p2_log <- ggplot(primer_b_clean, aes(x="", y=percent_with_primerB_rc)) +
-  geom_boxplot(outlier.shape=NA) +
-  geom_jitter(width=0.2, alpha=0.6) +
-  theme_bw() +
-  scale_y_log10(
-    labels = scales::percent_format(scale = 1),
-    breaks = scales::trans_breaks("log10", function(x) 10^x)(c(0.01, max_percent))
-  ) +
-  annotation_logticks(sides = "l") +
-  ylab("Percent of reads (log scale)") +
-  xlab("") +
-  labs(title="PrimerB_rc contamination (log scale)")
-
-# Display log scale plots side by side
-grid.arrange(p1_log, p2_log, ncol=2)
 ```
 
 ## Vector contamination removal
