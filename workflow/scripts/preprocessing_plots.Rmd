@@ -94,9 +94,13 @@ ggplot(primer_b_clean, aes(x="", y=percent_total_primerB)) +
 vector_data_path <- file.path(snakemake@input[["vector"]])
 vector_data <- read_tsv(vector_data_path)
 
+# Ensure valid percentages and replace NAs if necessary
+vector_clean <- vector_data %>%
+  mutate(percent_with_vector = coalesce(percent_with_vector, 0))
+
 # Generate a boxplot for percentage of reads with vector contamination
 # Colored by the top vector present
-ggplot(vector_data, aes(x = "", y = percent_with_vector, color = top_vector)) +
+ggplot(vector_clean, aes(x = "", y = percent_with_vector, color = top_vector)) +
   geom_boxplot(outlier.shape = NA) +
   geom_jitter(width = 0.2, alpha = 0.6) +
   theme_bw() +
