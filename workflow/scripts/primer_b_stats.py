@@ -14,10 +14,15 @@ def extract_stats(stats_file):
     
     with open(stats_file) as f:
         for line in f:
-            if "Total:" in line and total_reads == 0:
-                total_reads = int(line.split()[1])
-            if "Matched:" in line:
-                reads_with_hits = int(line.split()[1])
+            line = line.strip()
+            if line.startswith("#Total"):
+                fields = line.split()
+                if len(fields) >= 2:
+                    total_reads = int(fields[1])
+            if line.startswith("#Matched"):
+                fields = line.split()
+                if len(fields) >= 2:
+                    reads_with_hits = int(fields[1])
     
     data['total_reads'] = total_reads
     data['reads_with_hits'] = reads_with_hits
