@@ -24,7 +24,7 @@ def extract_vector_stats(stats_file):
                 continue
             elif reading_vectors and line.strip() and not line.startswith('#'):
                 parts = re.split(r'\s{2,}', line.strip())
-                if len(parts) >= 2:
+                if len(parts) >= 3:
                     vector_name = parts[0]
                     count = int(parts[1])
                     vector_hits[vector_name] = count
@@ -39,6 +39,9 @@ def extract_vector_stats(stats_file):
         data['top_vector'] = top_vector
     else:
         data['top_vector'] = 'None'
+
+    # Print debug information
+    print(f"Sample: {data['sample']}, Top vector: {data['top_vector']}, Total Reads: {total_reads}, Reads with Vector: {reads_with_vector}, Percent with Vector: {data['percent_with_vector']}")
 
     return data
 
