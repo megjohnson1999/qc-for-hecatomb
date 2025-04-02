@@ -11,7 +11,7 @@ def extract_vector_stats(stats_file):
     total_reads = 0
     reads_with_vector = 0
     vector_hits = {}
-    
+
     with open(stats_file) as f:
         reading_vectors = False
         for line in f:
@@ -28,18 +28,18 @@ def extract_vector_stats(stats_file):
                     vector_name = parts[0]
                     count = int(parts[1])
                     vector_hits[vector_name] = count
-    
+
     data['total_reads'] = total_reads
     data['reads_with_vector'] = reads_with_vector
     data['percent_with_vector'] = (reads_with_vector / total_reads * 100) if total_reads > 0 else 0
-    
+
     # Determine the top vector
     if vector_hits:
         top_vector = max(vector_hits, key=vector_hits.get)
         data['top_vector'] = top_vector
     else:
         data['top_vector'] = 'None'
-    
+
     return data
 
 # Extract data from all vector stats files
