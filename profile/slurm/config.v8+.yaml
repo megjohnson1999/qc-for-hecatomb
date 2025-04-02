@@ -33,3 +33,6 @@ set-resources:
         mem: 64G
     host_removal:
         mem: 64G 
+    megahit_assembly:
+        mem: 300G
+        runtime: 4000
