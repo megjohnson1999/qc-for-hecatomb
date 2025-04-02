@@ -23,10 +23,11 @@ def extract_vector_stats(stats_file):
                 reading_vectors = True
                 continue
             elif reading_vectors and line.strip() and not line.startswith('#'):
-                parts = re.split(r'\s{2,}', line.strip())
-                if len(parts) >= 3:
-                    vector_name = parts[0]
-                    count = int(parts[1])
+                # Split on whitespace and capture all parts
+                parts = re.split(r'\t+|\s{2,}', line.strip())
+                if len(parts) >= 4:
+                    vector_name = " ".join(parts[:-2])  # Capture the full vector name
+                    count = int(parts[-2])
                     vector_hits[vector_name] = count
 
     data['total_reads'] = total_reads
