@@ -87,7 +87,6 @@ ggplot(primer_b_clean, aes(x="", y=percent_total_primerB)) +
   xlab("") +
   scale_y_continuous(limits = c(0, max_percent)) +  # Adjusted scale
   labs(title="Total PrimerB contamination")
-```
 
 ## Vector contamination removal
 ```{r, echo=FALSE, warning=FALSE}
