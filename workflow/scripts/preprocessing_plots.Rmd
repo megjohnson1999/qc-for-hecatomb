@@ -90,7 +90,9 @@ ggplot(primer_b_clean, aes(x="", y=percent_total_primerB)) +
 
 ## Vector contamination removal
 ```{r, echo=FALSE, warning=FALSE}
-vector_data <- read_tsv(snakemake@input[[1]])
+# Read the TSV data extracted by the Python script
+vector_data_path <- file.path(snakemake@input[["vector"]])
+vector_data <- read_tsv(vector_data_path)
 
 # Generate a boxplot for percentage of reads with vector contamination
 # Colored by the top vector present
