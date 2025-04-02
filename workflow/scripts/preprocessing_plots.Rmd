@@ -37,7 +37,7 @@ ggplot(fastp_clean, aes(x="", y=percent_adapter_trimmed))+
 ```
 
 ## PrimerB contamination removal (Claude's code)
-```{r, include=FALSE}
+```{r, echo=FALSE}
 # Read in the data
 primer_b_path <- file.path(snakemake@input[["primer_b"]])
 primer_b <- read_tsv(primer_b_path)
@@ -88,40 +88,7 @@ ggplot(primer_b_clean, aes(x="", y=percent_total_primerB)) +
   scale_y_continuous(limits = c(0, max_percent)) +  # Adjusted scale
   labs(title="Total PrimerB contamination")
 
-# Approach 2: Combined violin plot with individual points
-primer_b_long <- primer_b_clean %>%
-  select(sample, percent_with_primerB, percent_with_primerB_rc, percent_total_primerB) %>%
-  pivot_longer(
-    cols = -sample,
-    names_to = "metric",
-    values_to = "percentage"
-  )
-
-# Clean up metric names for display
-primer_b_long$metric <- factor(
-  primer_b_long$metric,
-  levels = c("percent_with_primerB", "percent_with_primerB_rc", "percent_total_primerB"),
-  labels = c("PrimerB", "PrimerB_rc", "Total PrimerB")
-)
-
-# Create violin plot with points
-ggplot(primer_b_long, aes(x = metric, y = percentage, fill = metric)) +
-  geom_violin(alpha = 0.6) +
-  geom_boxplot(width = 0.1, alpha = 0.7, outlier.shape = NA) +
-  geom_jitter(width = 0.2, height = 0, alpha = 0.5) +
-  scale_fill_brewer(palette = "Set2") +
-  theme_bw() +
-  theme(
-    legend.position = "none",
-    axis.text.x = element_text(angle = 0)
-  ) +
-  labs(
-    title = "PrimerB Contamination Distribution",
-    x = NULL,
-    y = "Percent of reads (%)"
-  )
-
-# Approach 3: Ranked bar chart (for seeing individual samples)
+# Approach 2: Ranked bar chart (for seeing individual samples)
 # Focus on total PrimerB contamination
 top_samples <- primer_b_clean %>%
   arrange(desc(percent_total_primerB)) %>%
@@ -150,7 +117,7 @@ ggplot(top_samples, aes(x = reorder(sample_short, percent_total_primerB),
     y = "Percent of reads (%)"
   )
 
-# Approach 4: Log scale visualization (especially good for very small values)
+# Approach 3: Log scale visualization (especially good for very small values)
 # Create log scale boxplots
 p1_log <- ggplot(primer_b_clean, aes(x="", y=percent_with_primerB)) +
   geom_boxplot(outlier.shape=NA) +
