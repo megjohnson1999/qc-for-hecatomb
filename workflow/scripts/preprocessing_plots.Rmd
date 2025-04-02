@@ -50,8 +50,8 @@ primer_b_clean <- primer_b %>%
     percent_total_primerB = pmax(0, pmin(100, percent_total_primerB))
   )
 
-# Approach 1: Boxplots with adjusted y-axis scale
-# First, determine the appropriate y-axis limit based on your data
+# Boxplots with adjusted y-axis scale
+# First, determine the appropriate y-axis limit based on the data
 max_percent <- max(c(primer_b_clean$percent_with_primerB, 
                     primer_b_clean$percent_with_primerB_rc, 
                     primer_b_clean$percent_total_primerB)) * 1.1  # Add 10% margin
@@ -90,52 +90,22 @@ ggplot(primer_b_clean, aes(x="", y=percent_total_primerB)) +
 ```
 
 ## Vector contamination removal
-```{r, include=FALSE}
-# Read in the data
-vector_path <- file.path(snakemake@input[["vector"]])
-vector <- read_tsv(vector_path)
-```
-
 ```{r, echo=FALSE, warning=FALSE}
-# Create the plot for vector contamination with data validation
-vector_clean <- vector %>%
-  mutate(percent_with_vector = pmax(0, pmin(100, percent_with_vector)))
+vector_data <- read_tsv("path/to/output_file.tsv")
 
-ggplot(vector_clean, aes(x="", y=percent_with_vector))+
-  geom_boxplot(outlier.shape=NA)+
-  geom_jitter(width=0.2) +
+# Check the structure of the data
+print(head(vector_data))
+
+# Generate a boxplot for percentage of reads with vector contamination
+# Colored by the top vector present
+ggplot(vector_data, aes(x = "", y = percent_with_vector, color = top_vector)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, alpha = 0.6) +
   theme_bw() +
-  ylab("Percent of reads with vector") +
+  ylab("Percent of reads with vector contamination") +
   xlab("") +
-  scale_y_continuous(limits = c(0, 100)) +
-  labs(title="Vector contamination")
-
-# Plot top vector types if available
-if ("top1_vector" %in% colnames(vector)) {
-  # Gather the top vector data
-  top_vectors <- vector %>%
-    select(sample, contains("top"), -contains("percent")) %>%
-    pivot_longer(
-      cols = contains("top"),
-      names_to = c("rank", "type"),
-      names_pattern = "top(\\d+)_(vector|count)",
-      values_to = "value"
-    ) %>%
-    pivot_wider(
-      names_from = type,
-      values_from = value
-    ) %>%
-    filter(!is.na(vector) & !is.na(count) & count > 0)
-  
-  if (nrow(top_vectors) > 0) {
-    # Plot the top vectors
-    ggplot(top_vectors, aes(x = reorder(vector, -count), y = count)) +
-      geom_bar(stat = "identity") +
-      theme_bw() +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-      labs(title = "Most common vector contaminants", x = "Vector", y = "Count")
-  }
-}
+  labs(title = "Vector Contamination in Reads") +
+  scale_color_discrete(name = "Top Vector")
 ```
 
 ## BBMerge read merging statistics
