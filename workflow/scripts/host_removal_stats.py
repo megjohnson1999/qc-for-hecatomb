@@ -19,7 +19,10 @@ def extract_host_removal_stats(merged_bam, unmerged_bam):
     
     # Parse merged stats
     total_merged = int(re.search(r'(\d+) \+ \d+ in total', merged_stats).group(1))
-    unmapped_merged = int(re.search(r'(\d+) \+ \d+ mapped', merged_stats).group(1))
+    
+    # FIXED: Correctly get mapped reads count, not unmapped
+    mapped_merged = int(re.search(r'(\d+) \+ \d+ mapped', merged_stats).group(1))
+    unmapped_merged = total_merged - mapped_merged
     
     # Get stats for unmerged paired reads
     unmerged_stats_cmd = f"samtools flagstat {unmerged_bam}"
@@ -27,6 +30,7 @@ def extract_host_removal_stats(merged_bam, unmerged_bam):
     
     # Parse unmerged stats
     total_unmerged = int(re.search(r'(\d+) \+ \d+ in total', unmerged_stats).group(1))
+    
     # For paired data, we need to look at read pairs that have both reads unmapped (flag 12)
     unmerged_unmapped_cmd = f"samtools view -c -f 12 {unmerged_bam}"
     unmapped_unmerged_pairs = int(subprocess.check_output(unmerged_unmapped_cmd, shell=True).decode('utf-8').strip())
@@ -34,18 +38,26 @@ def extract_host_removal_stats(merged_bam, unmerged_bam):
     # Calculate statistics
     data['total_merged_reads'] = total_merged
     data['unmapped_merged_reads'] = unmapped_merged
-    data['percent_host_in_merged'] = 100 * (1 - unmapped_merged / total_merged) if total_merged > 0 else 0
+    
+    # FIXED: Calculate percentage of host reads (mapped/total)
+    data['percent_host_in_merged'] = 100 * (mapped_merged / total_merged) if total_merged > 0 else 0
     
     data['total_unmerged_reads'] = total_unmerged
     data['unmapped_unmerged_pairs'] = unmapped_unmerged_pairs
-    data['percent_host_in_unmerged'] = 100 * (1 - (unmapped_unmerged_pairs * 2) / total_unmerged) if total_unmerged > 0 else 0
+    
+    # FIXED: Calculate percentage of host reads for unmerged
+    mapped_unmerged_pairs = (total_unmerged / 2) - unmapped_unmerged_pairs
+    data['percent_host_in_unmerged'] = 100 * (mapped_unmerged_pairs / (total_unmerged / 2)) if total_unmerged > 0 else 0
     
     # Calculate combined statistics
     total_reads = total_merged + total_unmerged
-    unmapped_reads = unmapped_merged + (unmapped_unmerged_pairs * 2)  # Count both reads in the pair
+    
+    # Count both reads in unmerged pairs
+    mapped_reads = mapped_merged + (mapped_unmerged_pairs * 2)
+    
     data['total_reads'] = total_reads
-    data['unmapped_reads'] = unmapped_reads
-    data['percent_host_overall'] = 100 * (1 - unmapped_reads / total_reads) if total_reads > 0 else 0
+    data['mapped_reads'] = mapped_reads
+    data['percent_host_overall'] = 100 * (mapped_reads / total_reads) if total_reads > 0 else 0
     
     return data
 

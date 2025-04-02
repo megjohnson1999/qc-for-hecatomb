@@ -22,13 +22,17 @@ fastp <- read_tsv(fastp_path) %>%
 ```
 
 ```{r, echo=FALSE, warning=FALSE}
-# Create the boxplot
-ggplot(fastp, aes(x="", y=percent_adapter_trimmed))+
+# Create the boxplot with data validation
+fastp_clean <- fastp %>%
+  mutate(percent_adapter_trimmed = pmax(0, pmin(100, percent_adapter_trimmed)))
+
+ggplot(fastp_clean, aes(x="", y=percent_adapter_trimmed))+
   geom_boxplot(outlier.shape=NA)+
   geom_jitter(width=0.2) +
   theme_bw() +
   ylab("Percent of reads trimmed") +
   xlab("") +
+  scale_y_continuous(limits = c(0, 100)) +
   labs(title="Adapter trimming")
 ```
 
@@ -40,33 +44,43 @@ primer_b <- read_tsv(primer_b_path)
 ```
 
 ```{r, echo=FALSE, warning=FALSE}
-# Create plots for PrimerB and PrimerB_rc
-p1 <- ggplot(primer_b, aes(x="", y=percent_with_primerB))+
+# Create plots for PrimerB and PrimerB_rc with data validation
+primer_b_clean <- primer_b %>%
+  mutate(
+    percent_with_primerB = pmax(0, pmin(100, percent_with_primerB)),
+    percent_with_primerB_rc = pmax(0, pmin(100, percent_with_primerB_rc)),
+    percent_total_primerB = pmax(0, pmin(100, percent_total_primerB))
+  )
+
+p1 <- ggplot(primer_b_clean, aes(x="", y=percent_with_primerB))+
   geom_boxplot(outlier.shape=NA)+
   geom_jitter(width=0.2) +
   theme_bw() +
   ylab("Percent of reads") +
   xlab("") +
+  scale_y_continuous(limits = c(0, 100)) +
   labs(title="PrimerB contamination")
 
-p2 <- ggplot(primer_b, aes(x="", y=percent_with_primerB_rc))+
+p2 <- ggplot(primer_b_clean, aes(x="", y=percent_with_primerB_rc))+
   geom_boxplot(outlier.shape=NA)+
   geom_jitter(width=0.2) +
   theme_bw() +
   ylab("Percent of reads") +
   xlab("") +
+  scale_y_continuous(limits = c(0, 100)) +
   labs(title="PrimerB_rc contamination")
 
 # Display the plots side by side
 grid.arrange(p1, p2, ncol=2)
 
 # Plot total PrimerB contamination
-ggplot(primer_b, aes(x="", y=percent_total_primerB))+
+ggplot(primer_b_clean, aes(x="", y=percent_total_primerB))+
   geom_boxplot(outlier.shape=NA)+
   geom_jitter(width=0.2) +
   theme_bw() +
   ylab("Percent of reads with PrimerB") +
   xlab("") +
+  scale_y_continuous(limits = c(0, 100)) +
   labs(title="Total PrimerB contamination")
 ```
 
@@ -78,13 +92,17 @@ vector <- read_tsv(vector_path)
 ```
 
 ```{r, echo=FALSE, warning=FALSE}
-# Create the plot for vector contamination
-ggplot(vector, aes(x="", y=percent_with_vector))+
+# Create the plot for vector contamination with data validation
+vector_clean <- vector %>%
+  mutate(percent_with_vector = pmax(0, pmin(100, percent_with_vector)))
+
+ggplot(vector_clean, aes(x="", y=percent_with_vector))+
   geom_boxplot(outlier.shape=NA)+
   geom_jitter(width=0.2) +
   theme_bw() +
   ylab("Percent of reads with vector") +
   xlab("") +
+  scale_y_continuous(limits = c(0, 100)) +
   labs(title="Vector contamination")
 
 # Plot top vector types if available
@@ -127,13 +145,17 @@ bbmerge_hist <- read_tsv(bbmerge_hist_path)
 ```
 
 ```{r, echo=FALSE, warning=FALSE}
-# Create the plot for percent merged
-ggplot(bbmerge, aes(x="", y=percent_merged))+
+# Create the plot for percent merged with data validation
+bbmerge_clean <- bbmerge %>%
+  mutate(percent_merged = pmax(0, pmin(100, percent_merged)))
+
+ggplot(bbmerge_clean, aes(x="", y=percent_merged))+
   geom_boxplot(outlier.shape=NA)+
   geom_jitter(width=0.2) +
   theme_bw() +
   ylab("Percent of read pairs merged") +
   xlab("") +
+  scale_y_continuous(limits = c(0, 100)) +
   labs(title="Read merging rate")
 
 # Create a plot for average insert size
@@ -189,32 +211,43 @@ host <- read_tsv(host_path)
 
 ```{r, echo=FALSE, warning=FALSE}
 # Create plots for host removal
-p1 <- ggplot(host, aes(x="", y=percent_host_in_merged))+
+# Add data validation to ensure percentages are within valid range (0-100)
+host_clean <- host %>%
+  mutate(
+    percent_host_in_merged = pmax(0, pmin(100, percent_host_in_merged)),
+    percent_host_in_unmerged = pmax(0, pmin(100, percent_host_in_unmerged)),
+    percent_host_overall = pmax(0, pmin(100, percent_host_overall))
+  )
+
+p1 <- ggplot(host_clean, aes(x="", y=percent_host_in_merged))+
   geom_boxplot(outlier.shape=NA)+
   geom_jitter(width=0.2) +
   theme_bw() +
   ylab("Percent host reads") +
   xlab("") +
+  scale_y_continuous(limits = c(0, 100)) +
   labs(title="Host DNA in merged reads")
 
-p2 <- ggplot(host, aes(x="", y=percent_host_in_unmerged))+
+p2 <- ggplot(host_clean, aes(x="", y=percent_host_in_unmerged))+
   geom_boxplot(outlier.shape=NA)+
   geom_jitter(width=0.2) +
   theme_bw() +
   ylab("Percent host reads") +
   xlab("") +
+  scale_y_continuous(limits = c(0, 100)) +
   labs(title="Host DNA in unmerged reads")
 
 # Display the plots side by side
 grid.arrange(p1, p2, ncol=2)
 
 # Plot overall host contamination
-ggplot(host, aes(x="", y=percent_host_overall))+
+ggplot(host_clean, aes(x="", y=percent_host_overall))+
   geom_boxplot(outlier.shape=NA)+
   geom_jitter(width=0.2) +
   theme_bw() +
   ylab("Percent of reads mapped to host") +
   xlab("") +
+  scale_y_continuous(limits = c(0, 100)) +
   labs(title="Overall host contamination")
 ```
 
@@ -230,32 +263,32 @@ summary_data <- data.frame(
     "Host contamination"
   ),
   Mean_percent = c(
-    mean(fastp$percent_adapter_trimmed),
-    mean(primer_b$percent_total_primerB),
-    mean(vector$percent_with_vector),
-    mean(bbmerge$percent_merged),
-    mean(host$percent_host_overall)
+    mean(fastp_clean$percent_adapter_trimmed),
+    mean(primer_b_clean$percent_total_primerB),
+    mean(vector_clean$percent_with_vector),
+    mean(bbmerge_clean$percent_merged),
+    mean(host_clean$percent_host_overall)
   ),
   Median_percent = c(
-    median(fastp$percent_adapter_trimmed),
-    median(primer_b$percent_total_primerB),
-    median(vector$percent_with_vector),
-    median(bbmerge$percent_merged),
-    median(host$percent_host_overall)
+    median(fastp_clean$percent_adapter_trimmed),
+    median(primer_b_clean$percent_total_primerB),
+    median(vector_clean$percent_with_vector),
+    median(bbmerge_clean$percent_merged),
+    median(host_clean$percent_host_overall)
   ),
   Min_percent = c(
-    min(fastp$percent_adapter_trimmed),
-    min(primer_b$percent_total_primerB),
-    min(vector$percent_with_vector),
-    min(bbmerge$percent_merged),
-    min(host$percent_host_overall)
+    min(fastp_clean$percent_adapter_trimmed),
+    min(primer_b_clean$percent_total_primerB),
+    min(vector_clean$percent_with_vector),
+    min(bbmerge_clean$percent_merged),
+    min(host_clean$percent_host_overall)
   ),
   Max_percent = c(
-    max(fastp$percent_adapter_trimmed),
-    max(primer_b$percent_total_primerB),
-    max(vector$percent_with_vector),
-    max(bbmerge$percent_merged),
-    max(host$percent_host_overall)
+    max(fastp_clean$percent_adapter_trimmed),
+    max(primer_b_clean$percent_total_primerB),
+    max(vector_clean$percent_with_vector),
+    max(bbmerge_clean$percent_merged),
+    max(host_clean$percent_host_overall)
   )
 )
 
@@ -263,7 +296,7 @@ summary_data <- data.frame(
 summary_data[, 2:5] <- round(summary_data[, 2:5], 2)
 
 # Add a row for the final "kept reads" percentage (estimate)
-kept_percent <- 100 - mean(host$percent_host_overall)
+kept_percent <- 100 - mean(host_clean$percent_host_overall)
 summary_data <- rbind(
   summary_data,
   data.frame(
