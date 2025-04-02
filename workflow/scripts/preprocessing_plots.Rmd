@@ -36,15 +36,13 @@ ggplot(fastp_clean, aes(x="", y=percent_adapter_trimmed))+
   labs(title="Adapter trimming")
 ```
 
-## PrimerB contamination removal
+## PrimerB contamination removal (Claude's code)
 ```{r, include=FALSE}
 # Read in the data
 primer_b_path <- file.path(snakemake@input[["primer_b"]])
 primer_b <- read_tsv(primer_b_path)
-```
 
-```{r, echo=FALSE, warning=FALSE}
-# Create plots for PrimerB and PrimerB_rc with data validation
+# Clean data and ensure valid percentages
 primer_b_clean <- primer_b %>%
   mutate(
     percent_with_primerB = pmax(0, pmin(100, percent_with_primerB)),
@@ -52,36 +50,136 @@ primer_b_clean <- primer_b %>%
     percent_total_primerB = pmax(0, pmin(100, percent_total_primerB))
   )
 
-p1 <- ggplot(primer_b_clean, aes(x="", y=percent_with_primerB))+
-  geom_boxplot(outlier.shape=NA)+
-  geom_jitter(width=0.2) +
+# Approach 1: Boxplots with adjusted y-axis scale
+# First, determine the appropriate y-axis limit based on your data
+max_percent <- max(c(primer_b_clean$percent_with_primerB, 
+                    primer_b_clean$percent_with_primerB_rc, 
+                    primer_b_clean$percent_total_primerB)) * 1.1  # Add 10% margin
+
+# Create improved boxplots with adjusted scale
+p1 <- ggplot(primer_b_clean, aes(x="", y=percent_with_primerB)) +
+  geom_boxplot(outlier.shape=NA) +
+  geom_jitter(width=0.2, alpha=0.6) +
   theme_bw() +
   ylab("Percent of reads") +
   xlab("") +
-  scale_y_continuous(limits = c(0, 100)) +
+  scale_y_continuous(limits = c(0, max_percent)) +  # Adjusted scale
   labs(title="PrimerB contamination")
 
-p2 <- ggplot(primer_b_clean, aes(x="", y=percent_with_primerB_rc))+
-  geom_boxplot(outlier.shape=NA)+
-  geom_jitter(width=0.2) +
+p2 <- ggplot(primer_b_clean, aes(x="", y=percent_with_primerB_rc)) +
+  geom_boxplot(outlier.shape=NA) +
+  geom_jitter(width=0.2, alpha=0.6) +
   theme_bw() +
   ylab("Percent of reads") +
   xlab("") +
-  scale_y_continuous(limits = c(0, 100)) +
+  scale_y_continuous(limits = c(0, max_percent)) +  # Adjusted scale
   labs(title="PrimerB_rc contamination")
 
-# Display the plots side by side
+# Display the plots side by side with adjusted scales
 grid.arrange(p1, p2, ncol=2)
 
-# Plot total PrimerB contamination
-ggplot(primer_b_clean, aes(x="", y=percent_total_primerB))+
-  geom_boxplot(outlier.shape=NA)+
-  geom_jitter(width=0.2) +
+# Plot total PrimerB contamination with adjusted scale
+ggplot(primer_b_clean, aes(x="", y=percent_total_primerB)) +
+  geom_boxplot(outlier.shape=NA) +
+  geom_jitter(width=0.2, alpha=0.6) +
   theme_bw() +
   ylab("Percent of reads with PrimerB") +
   xlab("") +
-  scale_y_continuous(limits = c(0, 100)) +
+  scale_y_continuous(limits = c(0, max_percent)) +  # Adjusted scale
   labs(title="Total PrimerB contamination")
+
+# Approach 2: Combined violin plot with individual points
+primer_b_long <- primer_b_clean %>%
+  select(sample, percent_with_primerB, percent_with_primerB_rc, percent_total_primerB) %>%
+  pivot_longer(
+    cols = -sample,
+    names_to = "metric",
+    values_to = "percentage"
+  )
+
+# Clean up metric names for display
+primer_b_long$metric <- factor(
+  primer_b_long$metric,
+  levels = c("percent_with_primerB", "percent_with_primerB_rc", "percent_total_primerB"),
+  labels = c("PrimerB", "PrimerB_rc", "Total PrimerB")
+)
+
+# Create violin plot with points
+ggplot(primer_b_long, aes(x = metric, y = percentage, fill = metric)) +
+  geom_violin(alpha = 0.6) +
+  geom_boxplot(width = 0.1, alpha = 0.7, outlier.shape = NA) +
+  geom_jitter(width = 0.2, height = 0, alpha = 0.5) +
+  scale_fill_brewer(palette = "Set2") +
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 0)
+  ) +
+  labs(
+    title = "PrimerB Contamination Distribution",
+    x = NULL,
+    y = "Percent of reads (%)"
+  )
+
+# Approach 3: Ranked bar chart (for seeing individual samples)
+# Focus on total PrimerB contamination
+top_samples <- primer_b_clean %>%
+  arrange(desc(percent_total_primerB)) %>%
+  mutate(rank = row_number(),
+         sample_short = ifelse(nchar(sample) > 15, 
+                              paste0(substr(sample, 1, 12), "..."), 
+                              sample)) %>%
+  # If too many samples, limit to top 30
+  filter(rank <= min(30, n()))
+
+# Create horizontal bar chart
+ggplot(top_samples, aes(x = reorder(sample_short, percent_total_primerB), 
+                       y = percent_total_primerB)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label = sprintf("%.3f%%", percent_total_primerB)), 
+            hjust = -0.1, size = 3) +
+  coord_flip() +
+  theme_bw() +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  ) +
+  labs(
+    title = "Top Samples by Total PrimerB Contamination",
+    x = NULL,
+    y = "Percent of reads (%)"
+  )
+
+# Approach 4: Log scale visualization (especially good for very small values)
+# Create log scale boxplots
+p1_log <- ggplot(primer_b_clean, aes(x="", y=percent_with_primerB)) +
+  geom_boxplot(outlier.shape=NA) +
+  geom_jitter(width=0.2, alpha=0.6) +
+  theme_bw() +
+  scale_y_log10(
+    labels = scales::percent_format(scale = 1),
+    breaks = scales::trans_breaks("log10", function(x) 10^x)(c(0.01, max_percent))
+  ) +
+  annotation_logticks(sides = "l") +
+  ylab("Percent of reads (log scale)") +
+  xlab("") +
+  labs(title="PrimerB contamination (log scale)")
+
+p2_log <- ggplot(primer_b_clean, aes(x="", y=percent_with_primerB_rc)) +
+  geom_boxplot(outlier.shape=NA) +
+  geom_jitter(width=0.2, alpha=0.6) +
+  theme_bw() +
+  scale_y_log10(
+    labels = scales::percent_format(scale = 1),
+    breaks = scales::trans_breaks("log10", function(x) 10^x)(c(0.01, max_percent))
+  ) +
+  annotation_logticks(sides = "l") +
+  ylab("Percent of reads (log scale)") +
+  xlab("") +
+  labs(title="PrimerB_rc contamination (log scale)")
+
+# Display log scale plots side by side
+grid.arrange(p1_log, p2_log, ncol=2)
 ```
 
 ## Vector contamination removal
