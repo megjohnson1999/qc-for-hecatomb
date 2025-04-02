@@ -29,9 +29,11 @@ def extract_vector_stats(stats_file):
                 continue
             elif reading_vectors and line:
                 logging.debug(f"Processing line: {line}")
-                parts = re.split(r'\s{2,}|\t+', line)
-                if len(parts) >= 4:
-                    vector_name = " ".join(parts[:-2]).strip()
+
+                # Split on whitespace
+                parts = line.split()
+                if len(parts) >= 3:
+                    vector_name = " ".join(parts[:-2])  # Capture all parts as the vector name except the last two
                     count = int(parts[-2])
                     logging.debug(f"Vector name: {vector_name}, Count: {count}")
                     vector_hits[vector_name] = count
@@ -47,7 +49,7 @@ def extract_vector_stats(stats_file):
         data['top_vector'] = top_vector
     else:
         data['top_vector'] = 'None'
-
+    
     logging.info(f"Sample: {data['sample']}, Total Reads: {total_reads}, Reads with Vector: {reads_with_vector}, Percent with Vector: {data['percent_with_vector']}, Top Vector: {data['top_vector']}")
 
     return data
