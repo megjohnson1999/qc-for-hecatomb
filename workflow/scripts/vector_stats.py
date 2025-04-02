@@ -1,6 +1,5 @@
 import pandas as pd
 import re
-from glob import glob
 
 input_files = snakemake.input
 output_file = snakemake.output[0]
@@ -23,12 +22,17 @@ def extract_vector_stats(stats_file):
                 reading_vectors = True
                 continue
             elif reading_vectors and line.strip() and not line.startswith('#'):
-                # Split on whitespace and capture all parts
+                print(f"Processing line: {line.strip()}")  # Debugging: Print the line being processed
+
+                # Split on whitespace and ensure all parts are captured
                 parts = re.split(r'\t+|\s{2,}', line.strip())
                 if len(parts) >= 4:
                     vector_name = " ".join(parts[:-2])  # Capture the full vector name
                     count = int(parts[-2])
+                    print(f"Vector name: {vector_name}, Count: {count}")  # Debugging: Print the parsed vector name and count
                     vector_hits[vector_name] = count
+                else:
+                    print(f"Skipping line due to unmatched parts: {parts}")  # Debugging: Print if parts do not match expected format
 
     data['total_reads'] = total_reads
     data['reads_with_vector'] = reads_with_vector
@@ -41,8 +45,8 @@ def extract_vector_stats(stats_file):
     else:
         data['top_vector'] = 'None'
 
-    # Print debug information
-    print(f"Sample: {data['sample']}, Top vector: {data['top_vector']}, Total Reads: {total_reads}, Reads with Vector: {reads_with_vector}, Percent with Vector: {data['percent_with_vector']}")
+    # Print debug information for each sample
+    print(f"Sample: {data['sample']}, Total Reads: {total_reads}, Reads with Vector: {reads_with_vector}, Percent with Vector: {data['percent_with_vector']}, Top Vector: {data['top_vector']}")
 
     return data
 
