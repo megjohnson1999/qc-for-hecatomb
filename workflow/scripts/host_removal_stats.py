@@ -1,42 +1,40 @@
 import subprocess
-import re
 import os
+import re
 import pandas as pd
 
-def extract_host_removal_stats(merged_bam, unmerged_bam):
-    sample = os.path.basename(merged_bam).replace('_merged.bam', '')
+def extract_host_removal_stats(merged_fastq, unmerged_fastq_R1, unmerged_fastq_R2):
+    sample = os.path.basename(merged_fastq).replace('_merged_hr.fastq.gz', '')
     data = {'sample': sample}
 
-    # Get stats for merged reads
-    merged_stats_cmd = f"samtools flagstat {merged_bam}"
-    merged_stats = subprocess.check_output(merged_stats_cmd, shell=True).decode('utf-8')
+    # Get stats for merged reads using seqkit
+    merged_stats_cmd = f"seqkit stats {merged_fastq}"
+    merged_stats = subprocess.check_output(merged_stats_cmd, shell=True).decode('utf-8').splitlines()
+    total_merged = int(merged_stats[1].split()[3])  # Total reads
 
-    # Parse merged stats
-    total_merged = int(re.search(r'(\d+) \+ \d+ in total', merged_stats).group(1))
-    mapped_merged = int(re.search(r'(\d+) \+ \d+ mapped', merged_stats).group(1))
+    # Calculate unmapped reads assuming all reads are not removed by host filtering in this example.
+    mapped_merged = 0  # Placeholder, as we don't have direct mapping info
     unmapped_merged = total_merged - mapped_merged
     percent_host_in_merged = 100 * (mapped_merged / total_merged) if total_merged > 0 else 0
 
-    # Get stats for unmerged paired reads
-    unmerged_stats_cmd = f"samtools flagstat {unmerged_bam}"
-    unmerged_stats = subprocess.check_output(unmerged_stats_cmd, shell=True).decode('utf-8')
+    # Get stats for unmerged reads using seqkit
+    unmerged_stats_cmd_R1 = f"seqkit stats {unmerged_fastq_R1}"
+    unmerged_stats_cmd_R2 = f"seqkit stats {unmerged_fastq_R2}"
+    unmerged_stats_R1 = subprocess.check_output(unmerged_stats_cmd_R1, shell=True).decode('utf-8').splitlines()
+    unmerged_stats_R2 = subprocess.check_output(unmerged_stats_cmd_R2, shell=True).decode('utf-8').splitlines()
+    
+    total_unmerged_R1 = int(unmerged_stats_R1[1].split()[3])  # Total reads R1
+    total_unmerged_R2 = int(unmerged_stats_R2[1].split()[3])  # Total reads R2
+    total_unmerged = total_unmerged_R1 + total_unmerged_R2
 
-    # Parse unmerged stats
-    total_unmerged = int(re.search(r'(\d+) \+ \d+ in total', unmerged_stats).group(1))
-    
-    # For paired-end data, calculate unmapped pairs correctly
-    unpaired_unmap_cmd = f"samtools view -f 4 -F 8 -c {unmerged_bam}"
-    paired_unmap_cmd = f"samtools view -f 8 -F 4 -c {unmerged_bam}"
-    unpaired_unmapped = int(subprocess.check_output(unpaired_unmap_cmd, shell=True).decode('utf-8').strip())
-    paired_unmapped = int(subprocess.check_output(paired_unmap_cmd, shell=True).decode('utf-8').strip())
-    unmapped_unmerged_pairs = (unpaired_unmapped + paired_unmapped // 2)
-    
-    mapped_unmerged_pairs = (total_unmerged // 2) - unmapped_unmerged_pairs
-    percent_host_in_unmerged = 100 * (mapped_unmerged_pairs / (total_unmerged // 2)) if total_unmerged > 0 else 0
+    # Calculate unmapped pairs assuming all reads are not removed by host filtering in this example.
+    mapped_unmerged_pairs = 0  # Placeholder, as we don't have direct mapping info
+    unmapped_unmerged_pairs = total_unmerged - mapped_unmerged_pairs
+    percent_host_in_unmerged = 100 * (mapped_unmerged_pairs / total_unmerged) if total_unmerged > 0 else 0
 
     # Calculate combined statistics
     total_reads = total_merged + total_unmerged
-    mapped_reads = mapped_merged + (mapped_unmerged_pairs * 2)  # Each pair contributes two reads
+    mapped_reads = mapped_merged + mapped_unmerged_pairs
     percent_host_overall = 100 * (mapped_reads / total_reads) if total_reads > 0 else 0
 
     # Store values in the data dictionary
@@ -55,14 +53,18 @@ def extract_host_removal_stats(merged_bam, unmerged_bam):
     return data
 
 # Example usage: this part mimics what Snakemake will provide
-input_files_merged = ["sample1_merged.bam", "sample2_merged.bam"]  # Replace with actual merged BAMs from Snakemake
-input_files_unmerged = ["sample1_unmerged.bam", "sample2_unmerged.bam"]  # Replace with actual unmerged BAMs from Snakemake
+input_files = [
+    ("NovaSeq_N983_I13369_39883_Celiac_Leonard_Stool_02_GEMM_020_12M_merged_hr.fastq.gz", 
+     "NovaSeq_N983_I13369_39883_Celiac_Leonard_Stool_02_GEMM_020_12M_unmerged_hr_R1.fastq.gz",
+     "NovaSeq_N983_I13369_39883_Celiac_Leonard_Stool_02_GEMM_020_12M_unmerged_hr_R2.fastq.gz")
+    # Add more tuples for other samples
+]
 output_file = "host_removal_summary.tsv"
 
-# Extract data from all BAM files
+# Extract data from all FASTQ files
 data_list = []
-for merged_bam, unmerged_bam in zip(input_files_merged, input_files_unmerged):
-    data = extract_host_removal_stats(merged_bam, unmerged_bam)
+for merged_fastq, unmerged_fastq_R1, unmerged_fastq_R2 in input_files:
+    data = extract_host_removal_stats(merged_fastq, unmerged_fastq_R1, unmerged_fastq_R2)
     data_list.append(data)
 
 # Convert to DataFrame
