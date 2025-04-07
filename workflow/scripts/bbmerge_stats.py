@@ -15,16 +15,18 @@ def extract_merge_stats(hist_file):
     joined_pairs = 0
     avg_insert_size = 0
     insert_hist = {}
+    median_insert_size = 0
+    percent_merged = 0
     
     with open(hist_file) as f:
         for line in f:
             if line.startswith('#'):
-                if "Pairs:" in line:
-                    total_pairs = int(line.split(':')[1].strip())
-                elif "Joined:" in line:
-                    joined_pairs = int(line.split(':')[1].strip())
-                elif "Average Insert:" in line:
-                    avg_insert_size = float(line.split(':')[1].strip())
+                if "Mean" in line:
+                    avg_insert_size = float(line.split()[1])
+                elif "Median" in line:
+                    median_insert_size = float(line.split()[1])
+                elif "PercentOfPairs" in line:
+                    percent_merged = float(line.split()[1])
             elif re.match(r'^\d+', line):  # This is a histogram line
                 parts = line.strip().split('\t')
                 if len(parts) >= 2:
@@ -34,21 +36,22 @@ def extract_merge_stats(hist_file):
     
     data['total_pairs'] = total_pairs
     data['joined_pairs'] = joined_pairs
-    data['percent_merged'] = (joined_pairs / total_pairs * 100) if total_pairs > 0 else 0
+    data['percent_merged'] = percent_merged
     data['avg_insert_size'] = avg_insert_size
+    data['median_insert_size'] = median_insert_size
     data['insert_histogram'] = insert_hist
     
-    return data, insert_hist
-
+    return data
+    
 # Extract data from all BBMerge output files
 data_list = []
 all_hist_data = {}
 
 for f in input_files:
-    sample_data, hist_data = extract_merge_stats(f)
+    sample_data = extract_merge_stats(f)
     data_list.append(sample_data)
-    all_hist_data[sample_data['sample']] = hist_data
-
+    all_hist_data[sample_data['sample']] = sample_data['insert_histogram']
+    
 # Convert the main stats to a pandas DataFrame
 df = pd.DataFrame(data_list)
 
