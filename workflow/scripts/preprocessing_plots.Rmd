@@ -101,7 +101,7 @@ vector_clean <- vector_data %>%
 
 # Generate a boxplot for percentage of reads with vector contamination
 # Colored by the top vector present
-ggplot(vector_clean, aes(x = "", y = percent_with_vector, color = top_vector)) +
+ggplot(vector_clean, aes(x = "", y = percent_with_vector, color = short_vector_label)) +
   geom_boxplot(outlier.shape = NA) +
   geom_jitter(width = 0.2, alpha = 0.6) +
   theme_bw() +
