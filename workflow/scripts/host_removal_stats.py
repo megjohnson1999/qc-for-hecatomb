@@ -52,18 +52,15 @@ def extract_host_removal_stats(merged_fastq, unmerged_fastq_R1, unmerged_fastq_R
 
     return data
 
-# Example usage: this part mimics what Snakemake will provide
-input_files = [
-    ("NovaSeq_N983_I13369_39883_Celiac_Leonard_Stool_02_GEMM_020_12M_merged_hr.fastq.gz", 
-     "NovaSeq_N983_I13369_39883_Celiac_Leonard_Stool_02_GEMM_020_12M_unmerged_hr_R1.fastq.gz",
-     "NovaSeq_N983_I13369_39883_Celiac_Leonard_Stool_02_GEMM_020_12M_unmerged_hr_R2.fastq.gz")
-    # Add more tuples for other samples
-]
-output_file = "host_removal_summary.tsv"
+# Snakemake variables
+merged_fastq_files = snakemake.input.merged_fastqs
+unmerged_fastq_files_R1 = snakemake.input.unmerged_fastqs_R1
+unmerged_fastq_files_R2 = snakemake.input.unmerged_fastqs_R2
+output_file = snakemake.output[0]
 
 # Extract data from all FASTQ files
 data_list = []
-for merged_fastq, unmerged_fastq_R1, unmerged_fastq_R2 in input_files:
+for merged_fastq, unmerged_fastq_R1, unmerged_fastq_R2 in zip(merged_fastq_files, unmerged_fastq_files_R1, unmerged_fastq_files_R2):
     data = extract_host_removal_stats(merged_fastq, unmerged_fastq_R1, unmerged_fastq_R2)
     data_list.append(data)
 
