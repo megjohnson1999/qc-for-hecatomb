@@ -107,7 +107,11 @@ ggplot(vector_clean, aes(x = "", y = percent_with_vector, color = top_vector)) +
   ylab("Percent of reads with vector contamination") +
   xlab("") +
   labs(title = "Vector Contamination in Reads") +
-  scale_color_discrete(name = "Top Vector")
+  scale_color_discrete(name = "Top Vector") +
+  theme(legend.text = element_text(size = 10), # Adjust legend text size
+        legend.key.size = unit(0.5, "cm")) +  # Adjust size of legend boxes
+  guides(color = guide_legend(label.position = "top", label.hjust = 0.5)) +
+  scale_color_discrete(labels = function(x) str_wrap(x, width = 10))
 ```
 
 ## BBMerge read merging statistics
