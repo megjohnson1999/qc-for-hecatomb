@@ -265,7 +265,7 @@ rule bbmerge_summary:
 
 rule host_removal_summary:
     input:
-        merged_fastqs = expand(os.path.join(dir["output"], "host_removed", "{sample}_merged_hr.fastq.gz"), sample=SAMPLES),
+        merged = expand(os.path.join(dir["output"], "host_removed", "{sample}_merged_hr.fastq.gz"), sample=SAMPLES),
         unmerged_R1 = expand(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R1.fastq.gz"), sample=SAMPLES),
         unmerged_R2 = expand(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R2.fastq.gz"), sample=SAMPLES)
     output:
