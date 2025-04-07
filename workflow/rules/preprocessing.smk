@@ -265,12 +265,13 @@ rule bbmerge_summary:
 
 rule host_removal_summary:
     input:
-        merged_bam = expand(os.path.join(dir["output"], "host_removed", "{sample}_merged.bam"), sample = SAMPLES),
-        unmerged_bam = expand(os.path.join(dir["output"], "host_removed", "{sample}_unmerged.bam"), sample = SAMPLES)
+        merged_fastqs = expand(os.path.join(dir["output"], "host_removed", "{sample}_merged_hr.fastq.gz"), sample=SAMPLES),
+        unmerged_R1 = expand(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R1.fastq.gz"), sample=SAMPLES),
+        unmerged_R2 = expand(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R2.fastq.gz"), sample=SAMPLES)
     output:
         os.path.join(dir["stats"], "qc", "host_removal_stats.tsv")
     conda:
-        os.path.join(dir["env"], "pandas.yaml")
+        os.path.join(dir["env"], "pandas.yaml") # Ensure this points to the correct environment file
     script:
         "../scripts/host_removal_stats.py"
 
