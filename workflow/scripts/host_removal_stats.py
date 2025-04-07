@@ -53,9 +53,9 @@ def extract_host_removal_stats(merged_fastq, unmerged_fastq_R1, unmerged_fastq_R
     return data
 
 # Snakemake variables
-merged_fastq_files = snakemake.input.merged_fastqs
-unmerged_fastq_files_R1 = snakemake.input.unmerged_fastqs_R1
-unmerged_fastq_files_R2 = snakemake.input.unmerged_fastqs_R2
+merged_fastq_files = snakemake.input.merged
+unmerged_fastq_files_R1 = snakemake.input.unmerged_R1
+unmerged_fastq_files_R2 = snakemake.input.unmerged_R2
 output_file = snakemake.output[0]
 
 # Extract data from all FASTQ files
