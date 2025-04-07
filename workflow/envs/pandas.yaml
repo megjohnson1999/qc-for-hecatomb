@@ -6,4 +6,5 @@ channels:
 dependencies:
   - python
   - pandas
-  - samtools
+  - seqkit
+  - pigz
