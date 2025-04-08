@@ -7,30 +7,37 @@ def extract_host_removal_stats(merged_fastq, unmerged_fastq_R1, unmerged_fastq_R
     sample = os.path.basename(merged_fastq).replace('_merged_hr.fastq.gz', '')
     data = {'sample': sample}
 
-    # Get stats for merged reads using seqkit
+# Get stats for merged reads using seqkit
     merged_stats_cmd = f"seqkit stats {merged_fastq}"
-    merged_stats = subprocess.check_output(merged_stats_cmd, shell=True).decode('utf-8').splitlines()
-    total_merged = int(merged_stats.split()[3].replace(',', ''))
+    merged_stats_output = subprocess.check_output(merged_stats_cmd, shell=True).decode('utf-8').splitlines()
+    merged_header = merged_stats_output[0].split()
+    merged_values = merged_stats_output[1].split()
+    total_merged = int(merged_values[merged_header.index('num_seqs')].replace(',', ''))  # Remove commas before converting
 
-    # Calculate unmapped reads assuming all reads are not removed by host filtering in this example.
-    mapped_merged = 0  # Placeholder, as we don't have direct mapping info
+    # Calculate unmapped reads assuming all reads are host reads.
+    mapped_merged = 0  # Placeholder
     unmapped_merged = total_merged - mapped_merged
     percent_host_in_merged = 100 * (mapped_merged / total_merged) if total_merged > 0 else 0
 
     # Get stats for unmerged reads using seqkit
     unmerged_stats_cmd_R1 = f"seqkit stats {unmerged_fastq_R1}"
+    unmerged_stats_output_R1 = subprocess.check_output(unmerged_stats_cmd_R1, shell=True).decode('utf-8').splitlines()
+    unmerged_header_R1 = unmerged_stats_output_R1[0].split()
+    unmerged_values_R1 = unmerged_stats_output_R1[1].split()
+    total_unmerged_R1 = int(unmerged_values_R1[unmerged_header_R1.index('num_seqs')].replace(',', ''))  # Remove commas
+
     unmerged_stats_cmd_R2 = f"seqkit stats {unmerged_fastq_R2}"
-    unmerged_stats_R1 = subprocess.check_output(unmerged_stats_cmd_R1, shell=True).decode('utf-8').splitlines()
-    unmerged_stats_R2 = subprocess.check_output(unmerged_stats_cmd_R2, shell=True).decode('utf-8').splitlines()
-    
-    total_unmerged_R1 = int(unmerged_stats_R1[1].split()[3].replace(',', ''))  # Total reads R1
-    total_unmerged_R2 = int(unmerged_stats_R2[1].split()[3].replace(',', ''))  # Total reads R2
+    unmerged_stats_output_R2 = subprocess.check_output(unmerged_stats_cmd_R2, shell=True).decode('utf-8').splitlines()
+    unmerged_header_R2 = unmerged_stats_output_R2[0].split()
+    unmerged_values_R2 = unmerged_stats_output_R2[1].split()
+    total_unmerged_R2 = int(unmerged_values_R2[unmerged_header_R2.index('num_seqs')].replace(',', ''))  # Remove commas
+
     total_unmerged = total_unmerged_R1 + total_unmerged_R2
 
-    # Calculate unmapped pairs assuming all reads are not removed by host filtering in this example.
-    mapped_unmerged_pairs = 0  # Placeholder, as we don't have direct mapping info
+    # Calculate unmapped pairs assuming all reads are host reads.
+    mapped_unmerged_pairs = 0  # Placeholder
     unmapped_unmerged_pairs = total_unmerged - mapped_unmerged_pairs
-    percent_host_in_unmerged = 100 * (mapped_unmerged_pairs / total_unmerged) if total_unmerged > 0 else 0
+    percent_host_in_unmerged = 100 * (mapped_unmapped_pairs / total_unmerged) if total_unmerged > 0 else 0
 
     # Calculate combined statistics
     total_reads = total_merged + total_unmerged
