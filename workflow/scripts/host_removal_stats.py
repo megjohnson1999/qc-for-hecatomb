@@ -42,7 +42,7 @@ def extract_host_removal_stats(merged_fastq, unmerged_fastq_R1, unmerged_fastq_R
     # Calculate combined statistics
     total_reads = total_merged + total_unmerged
     mapped_reads = mapped_merged + mapped_unmerged_pairs
-    percent_host_overall = 100 * (mapped_reads / total_reads) if total_reads > 0 else 0
+    #percent_host_overall = 100 * (mapped_reads / total_reads) if total_reads > 0 else 0
 
     # Store values in the data dictionary
     data.update({
@@ -51,7 +51,7 @@ def extract_host_removal_stats(merged_fastq, unmerged_fastq_R1, unmerged_fastq_R
         'percent_host_in_merged': percent_host_in_merged,
         'total_unmerged_reads': total_unmerged,
         'unmapped_unmerged_pairs': unmapped_unmerged_pairs,
-        'percent_host_in_unmerged': percent_host_in_unmerged,
+        #'percent_host_in_unmerged': percent_host_in_unmerged,
         'total_reads': total_reads,
         'mapped_reads': mapped_reads,
         'percent_host_overall': percent_host_overall
