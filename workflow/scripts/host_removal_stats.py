@@ -37,12 +37,12 @@ def extract_host_removal_stats(merged_fastq, unmerged_fastq_R1, unmerged_fastq_R
     # Calculate unmapped pairs assuming all reads are host reads.
     mapped_unmerged_pairs = 0  # Placeholder
     unmapped_unmerged_pairs = total_unmerged - mapped_unmerged_pairs
-    percent_host_in_unmerged = 100 * (mapped_unmapped_pairs / total_unmerged) if total_unmerged > 0 else 0
+    #percent_host_in_unmerged = 100 * (mapped_unmapped_pairs / total_unmerged) if total_unmerged > 0 else 0
 
     # Calculate combined statistics
     total_reads = total_merged + total_unmerged
     mapped_reads = mapped_merged + mapped_unmerged_pairs
-    #percent_host_overall = 100 * (mapped_reads / total_reads) if total_reads > 0 else 0
+    percent_host_overall = 100 * (mapped_reads / total_reads) if total_reads > 0 else 0
 
     # Store values in the data dictionary
     data.update({
