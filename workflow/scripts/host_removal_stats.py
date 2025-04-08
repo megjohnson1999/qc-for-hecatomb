@@ -10,7 +10,7 @@ def extract_host_removal_stats(merged_fastq, unmerged_fastq_R1, unmerged_fastq_R
     # Get stats for merged reads using seqkit
     merged_stats_cmd = f"seqkit stats {merged_fastq}"
     merged_stats = subprocess.check_output(merged_stats_cmd, shell=True).decode('utf-8').splitlines()
-    total_merged = int(merged_stats[1].split()[3])  # Total reads
+    total_merged = int(merged_stats.split()[3].replace(',', ''))
 
     # Calculate unmapped reads assuming all reads are not removed by host filtering in this example.
     mapped_merged = 0  # Placeholder, as we don't have direct mapping info
@@ -23,8 +23,8 @@ def extract_host_removal_stats(merged_fastq, unmerged_fastq_R1, unmerged_fastq_R
     unmerged_stats_R1 = subprocess.check_output(unmerged_stats_cmd_R1, shell=True).decode('utf-8').splitlines()
     unmerged_stats_R2 = subprocess.check_output(unmerged_stats_cmd_R2, shell=True).decode('utf-8').splitlines()
     
-    total_unmerged_R1 = int(unmerged_stats_R1[1].split()[3])  # Total reads R1
-    total_unmerged_R2 = int(unmerged_stats_R2[1].split()[3])  # Total reads R2
+    total_unmerged_R1 = int(unmerged_stats_R1[1].split()[3].replace(',', ''))  # Total reads R1
+    total_unmerged_R2 = int(unmerged_stats_R2[1].split()[3].replace(',', ''))  # Total reads R2
     total_unmerged = total_unmerged_R1 + total_unmerged_R2
 
     # Calculate unmapped pairs assuming all reads are not removed by host filtering in this example.
