@@ -89,7 +89,7 @@ ggplot(primer_b_clean, aes(x="", y=percent_total_primerB)) +
   labs(title="Total PrimerB contamination")
 
 ## Vector contamination removal
-```{r, echo=FALSE, warning=FALSE}
+```{r, echo=FALSE, warning=FALSE, include=FALSE}
 # Read the TSV data extracted by the Python script
 vector_data_path <- file.path(snakemake@input[["vector"]])
 vector_data <- read_tsv(vector_data_path)
@@ -148,40 +148,6 @@ ggplot(bbmerge, aes(x="", y=avg_insert_size))+
   ylab("Average insert size (bp)") +
   xlab("") +
   labs(title="Insert size distribution")
-
-# Create insert size histogram for a representative sample
-# First, melt the histogram data
-bbmerge_hist_long <- bbmerge_hist %>%
-  rownames_to_column(var = "insert_size") %>%
-  mutate(insert_size = as.numeric(insert_size)) %>%
-  pivot_longer(
-    cols = -insert_size,
-    names_to = "sample",
-    values_to = "count"
-  ) %>%
-  filter(count > 0 & insert_size > 0 & insert_size < 1000)  # Filter out zeros and extreme values
-
-# Select a representative sample (highest total count)
-sample_counts <- bbmerge_hist_long %>%
-  group_by(sample) %>%
-  summarize(total = sum(count)) %>%
-  arrange(desc(total))
-
-if (nrow(sample_counts) > 0) {
-  rep_sample <- sample_counts$sample[1]
-  
-  # Plot the histogram for the representative sample
-  bbmerge_hist_long %>%
-    filter(sample == rep_sample) %>%
-    ggplot(aes(x = insert_size, y = count)) +
-    geom_line() +
-    theme_bw() +
-    labs(
-      title = paste("Insert size distribution for sample", rep_sample),
-      x = "Insert size (bp)",
-      y = "Count"
-    )
-}
 ```
 
 ## Host removal statistics
