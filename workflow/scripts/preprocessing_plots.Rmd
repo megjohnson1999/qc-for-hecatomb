@@ -196,31 +196,8 @@ host <- read_tsv(host_path)
 # Add data validation to ensure percentages are within valid range (0-100)
 host_clean <- host %>%
   mutate(
-    percent_host_in_merged = pmax(0, pmin(100, percent_host_in_merged)),
-    percent_host_in_unmerged = pmax(0, pmin(100, percent_host_in_unmerged)),
     percent_host_overall = pmax(0, pmin(100, percent_host_overall))
   )
-
-p1 <- ggplot(host_clean, aes(x="", y=percent_host_in_merged))+
-  geom_boxplot(outlier.shape=NA)+
-  geom_jitter(width=0.2) +
-  theme_bw() +
-  ylab("Percent host reads") +
-  xlab("") +
-  scale_y_continuous(limits = c(0, 100)) +
-  labs(title="Host DNA in merged reads")
-
-p2 <- ggplot(host_clean, aes(x="", y=percent_host_in_unmerged))+
-  geom_boxplot(outlier.shape=NA)+
-  geom_jitter(width=0.2) +
-  theme_bw() +
-  ylab("Percent host reads") +
-  xlab("") +
-  scale_y_continuous(limits = c(0, 100)) +
-  labs(title="Host DNA in unmerged reads")
-
-# Display the plots side by side
-grid.arrange(p1, p2, ncol=2)
 
 # Plot overall host contamination
 ggplot(host_clean, aes(x="", y=percent_host_overall))+
