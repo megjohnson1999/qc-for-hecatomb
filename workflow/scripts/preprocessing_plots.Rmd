@@ -190,6 +190,7 @@ p1 <- ggplot(bbmerge_clean, aes(x="All samples", y=percent_merged)) +
 # Create a plot for average insert size
 p2 <- ggplot(bbmerge, aes(x="All samples", y=avg_insert_size)) +
   geom_boxplot(fill = "lightsteelblue", alpha = 0.7) +
+  geom_jitter(width=0.2, color="darkblue", alpha = 0.5, size = 1) +
   theme_preprocessing() +
   ylab("Average insert size (bp)") +
   xlab("") +
