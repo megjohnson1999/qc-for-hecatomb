@@ -194,8 +194,8 @@ rule host_removal:
     output:
         merged_bam = temp(os.path.join(dir["output"], "host_removed", "{sample}_merged.bam")),
         merged_hr = os.path.join(dir["output"], "host_removed", "{sample}_merged_hr.fastq.gz"),
-        unmerged_bam = temp(os.path.join(dir["output"], "host_removed", "{sample}_unmerged.bam")),
-        unmerged_bam_sorted = temp(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_sorted.bam")),
+        #unmerged_bam = temp(os.path.join(dir["output"], "host_removed", "{sample}_unmerged.bam")),
+        #unmerged_bam_sorted = temp(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_sorted.bam")),
         unmerged1_hr = os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R1.fastq.gz"),
         unmerged2_hr = os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R2.fastq.gz"),
     threads: 24
