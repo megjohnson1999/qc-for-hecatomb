@@ -8,6 +8,7 @@ dependencies:
   - r-tidyverse
   - r-readr
   - r-gridextra
+  - r-kableExtra
   - r-knitr
   - r-rmarkdown
   - bioconductor-biostrings=2.62.0

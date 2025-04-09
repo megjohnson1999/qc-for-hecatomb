@@ -50,5 +50,5 @@ rule all:
         #expand(os.path.join(dir["stats"], "rm_vector_contamination", "{sample}_rm_vc.stats"), sample = SAMPLES),
         expand(os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"), sample = SAMPLES),
         expand(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R1.fastq.gz"), sample = SAMPLES),
-        os.path.join(dir["stats"], "assembly", "assembly_stats.txt"),
+        #os.path.join(dir["stats"], "assembly", "assembly_stats.txt"),
     default_target: True

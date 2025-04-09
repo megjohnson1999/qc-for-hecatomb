@@ -275,18 +275,6 @@ summary_data <- data.frame(
 # Format percentages to two decimal places
 summary_data[, 2:5] <- round(summary_data[, 2:5], 2)
 
-# Add a row for the final "kept reads" percentage (estimate)
-kept_percent <- 100 - mean(host_clean$percent_host_overall)
-summary_data <- rbind(
-  summary_data,
-  data.frame(
-    Step = "Reads kept after all steps (estimate)",
-    Mean_percent = round(kept_percent, 2),
-    Median_percent = NA,
-    Min_percent = NA,
-    Max_percent = NA
-  )
-)
 
 # Display the summary table with formatting
 knitr::kable(summary_data, 
