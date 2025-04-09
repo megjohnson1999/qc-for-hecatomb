@@ -13,6 +13,54 @@ library(tidyverse)
 library(gridExtra)
 ```
 
+## Raw Input Data Statistics
+```{r, include=FALSE}
+# Read in the raw input data statistics
+raw_stats_path <- file.path(snakemake@input[["raw_stats"]])
+raw_stats <- read_tsv(raw_stats_path)
+
+# Extract sample name from the file column
+raw_stats <- raw_stats %>% 
+  mutate(sample = gsub(".+/([^/]+)_R[12]\\.fastq\\.gz", "\\1", file))
+```
+
+```{r, echo=FALSE, warning=FALSE}
+# Create boxplot for number of reads across samples
+ggplot(raw_stats, aes(x="", y=num_seqs/1000000)) +
+  geom_boxplot(outlier.shape=NA) +
+  geom_jitter(width=0.2, aes(color=sample)) +
+  theme_bw() +
+  theme(legend.position="none") +
+  ylab("Number of reads (millions)") +
+  xlab("") +
+  labs(title="Raw read counts distribution")
+
+# Create boxplot for sequence length
+ggplot(raw_stats, aes(x="", y=avg_len)) +
+  geom_boxplot(outlier.shape=NA) +
+  geom_jitter(width=0.2, aes(color=sample)) +
+  theme_bw() +
+  theme(legend.position="none") +
+  ylab("Average read length (bp)") +
+  xlab("") +
+  labs(title="Read length distribution")
+
+# Create a plot showing reads per sample
+read_counts <- raw_stats %>%
+  # Identify R1 files to avoid double-counting paired reads
+  filter(grepl("_R1\\.fastq\\.gz", file)) %>%
+  # Sort by number of reads descending
+  arrange(desc(num_seqs))
+
+ggplot(read_counts, aes(x=reorder(sample, -num_seqs), y=num_seqs/1000000)) +
+  geom_bar(stat="identity", fill="steelblue") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) +
+  xlab("Sample") +
+  ylab("Number of reads (millions)") +
+  labs(title="Raw reads per sample")
+```
+
 ## Adapters trimmed by fastp
 ```{r, include=FALSE}
 # Read in the data

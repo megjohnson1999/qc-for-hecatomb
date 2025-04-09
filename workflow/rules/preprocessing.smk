@@ -265,6 +265,7 @@ rule host_removal_summary:
 
 rule preprocessing_plots:
     input:
+        raw_stats = os.path.join(dir["stats"], "raw_input_data", "basic_stats.txt"),
         fastp = os.path.join(dir["stats"], "qc", "fastp_stats.tsv"),
         primer_b = os.path.join(dir["stats"], "qc", "primer_b_stats.tsv"),
         vector = os.path.join(dir["stats"], "qc", "vector_stats.tsv"),
