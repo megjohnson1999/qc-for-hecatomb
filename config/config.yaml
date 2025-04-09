@@ -33,14 +33,14 @@ qc:
         s1:
           ktrim=l
           k=16
-          mink=8
+          mink=9
           rcomp=f
           ordered=t
           ow=t
         s2:
           ktrim=r
           k=16
-          mink=8
+          mink=9
           rcomp=f
           ordered=t
           ow=t
