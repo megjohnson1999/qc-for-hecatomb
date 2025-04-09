@@ -207,27 +207,17 @@ rule host_removal:
         os.path.join(dir["bench"], "host_removal", "{sample}_hr.txt")
     shell:
         """
-        # Merged reads
-        minimap2 -ax sr {input.index} {input.merged} \
+        # Merged reads - filter unmapped reads (-f 4) immediately after alignment
+        minimap2 -ax sr -t {threads} {input.index} {input.merged} \
             | samtools view -bh -f 4 -F 256 \
-            | samtools sort -o {output.merged_bam}
-        samtools index {output.merged_bam}
-
-        samtools fastq {output.merged_bam} | gzip -c > {output.merged_hr} 
-
-        # Unmerged pairs
-        minimap2 -ax sr {input.index} {input.unmerged1} {input.unmerged2} \
-            | samtools view -bh \
-            | samtools sort -o {output.unmerged_bam}
-        samtools index {output.unmerged_bam} 
-
-        samtools view -u -f 12 -F 256 {output.unmerged_bam} \
-            | samtools sort -n -o {output.unmerged_bam_sorted}
-
-        samtools fastq -1 {output.unmerged1_hr} -2 {output.unmerged2_hr} \
-        -0 /dev/null -s /dev/null \
-        -n {output.unmerged_bam_sorted}      
-
+            | samtools fastq | gzip -c > {output.merged_hr}
+            
+        # Unmerged pairs - filter reads where both in pair are unmapped (-f 12)
+        minimap2 -ax sr -t {threads} {input.index} {input.unmerged1} {input.unmerged2} \
+            | samtools view -bh -f 12 -F 256 \
+            | samtools sort -n \
+            | samtools fastq -1 {output.unmerged1_hr} -2 {output.unmerged2_hr} \
+              -0 /dev/null -s /dev/null -n
         """
 
 
