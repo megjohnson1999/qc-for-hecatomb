@@ -194,8 +194,8 @@ rule host_removal:
     output:
         merged_bam = temp(os.path.join(dir["output"], "host_removed", "{sample}_merged.bam")),
         merged_hr = os.path.join(dir["output"], "host_removed", "{sample}_merged_hr.fastq.gz"),
-        #unmerged_bam = temp(os.path.join(dir["output"], "host_removed", "{sample}_unmerged.bam")),
-        #unmerged_bam_sorted = temp(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_sorted.bam")),
+        unmerged_bam = temp(os.path.join(dir["output"], "host_removed", "{sample}_unmerged.bam")),
+        unmerged_sorted = temp(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_sorted.bam")),
         unmerged1_hr = os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R1.fastq.gz"),
         unmerged2_hr = os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R2.fastq.gz"),
     threads: 24
@@ -208,16 +208,14 @@ rule host_removal:
     shell:
         """
         # Merged reads - filter unmapped reads (-f 4) immediately after alignment
-        minimap2 -ax sr -t {threads} {input.index} {input.merged} \
-            | samtools view -bh -f 4 -F 256 \
-            | samtools fastq | gzip -c > {output.merged_hr}
+        minimap2 -ax sr -t {threads} {input.index} {input.merged} | samtools view -bh -f 4 -F 256 > {output.merged_bam}
+        samtools fastq {output.merged_bam} | gzip -c > {output.merged_hr}
             
         # Unmerged pairs - filter reads where both in pair are unmapped (-f 12)
-        minimap2 -ax sr -t {threads} {input.index} {input.unmerged1} {input.unmerged2} \
-            | samtools view -bh -f 12 -F 256 \
-            | samtools sort -n \
-            | samtools fastq -1 {output.unmerged1_hr} -2 {output.unmerged2_hr} \
-              -0 /dev/null -s /dev/null -n
+        # Break this into separate steps to ensure each output is properly created
+        minimap2 -ax sr -t {threads} {input.index} {input.unmerged1} {input.unmerged2} > {output.unmerged_bam}
+        samtools view -bh -f 12 -F 256 {output.unmerged_bam} | samtools sort -n > {output.unmerged_sorted}
+        samtools fastq -1 {output.unmerged1_hr} -2 {output.unmerged2_hr} -0 /dev/null -s /dev/null -n {output.unmerged_sorted}
         """
 
 
