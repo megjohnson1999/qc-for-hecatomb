@@ -210,62 +210,24 @@ host <- read_tsv(host_path)
 # Add data validation to ensure percentages are within valid range (0-100)
 host_clean <- host %>%
   mutate(
-    percent_host_in_merged = pmax(0, pmin(100, percent_host_in_merged)),
-    percent_host_in_unmerged = pmax(0, pmin(100, percent_host_in_unmerged)),
     percent_host_overall = pmax(0, pmin(100, percent_host_overall))
   )
 
-# Create separate boxplots for merged and unmerged host contamination
-p1 <- ggplot(host_clean, aes(x="", y=percent_host_in_merged))+
-  geom_boxplot(outlier.shape=NA)+
-  geom_jitter(width=0.2, alpha=0.6) +
-  theme_bw() +
-  ylab("Percent host reads") +
-  xlab("") +
-  scale_y_continuous(limits = c(0, 100)) +
-  labs(title="Host contamination in merged reads")
+# Calculate an appropriate y-axis upper limit based on the data
+# Add a small buffer above the maximum value (20%) but don't exceed 100
+max_y_limit <- min(100, max(host_clean$percent_host_overall) * 1.2)
+# If all values are very low, don't set an unnecessarily high limit
+if (max_y_limit < 5) max_y_limit <- 5
 
-p2 <- ggplot(host_clean, aes(x="", y=percent_host_in_unmerged))+
-  geom_boxplot(outlier.shape=NA)+
-  geom_jitter(width=0.2, alpha=0.6) +
-  theme_bw() +
-  ylab("Percent host reads") +
-  xlab("") +
-  scale_y_continuous(limits = c(0, 100)) +
-  labs(title="Host contamination in unmerged reads")
-
-# Display the plots side by side
-grid.arrange(p1, p2, ncol=2)
-
-# Plot overall host contamination
+# Plot only overall host contamination with dynamic y-axis limit
 ggplot(host_clean, aes(x="", y=percent_host_overall))+
   geom_boxplot(outlier.shape=NA)+
   geom_jitter(width=0.2) +
   theme_bw() +
   ylab("Percent of reads mapped to host") +
   xlab("") +
-  scale_y_continuous(limits = c(0, 100)) +
+  scale_y_continuous(limits = c(0, max_y_limit)) +
   labs(title="Overall host contamination")
-
-# Create a bar plot showing host stats by sample
-host_long <- host_clean %>%
-  select(sample, percent_host_in_merged, percent_host_in_unmerged, percent_host_overall) %>%
-  pivot_longer(cols = starts_with("percent_"), 
-               names_to = "metric", 
-               values_to = "percentage") %>%
-  mutate(metric = factor(metric, 
-                         levels = c("percent_host_overall", "percent_host_in_merged", "percent_host_in_unmerged"),
-                         labels = c("Overall", "Merged reads", "Unmerged reads")))
-
-ggplot(host_long, aes(x = reorder(sample, percentage), y = percentage, fill = metric)) +
-  geom_col(position = "dodge") +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = "Host contamination by sample",
-       x = "Sample",
-       y = "Percent host contamination",
-       fill = "Read type") +
-  scale_fill_brewer(palette = "Set1")
 ```
 
 ## Summary of preprocessing
