@@ -1,20 +1,39 @@
 ---
 title: "Results of preprocessing"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
-output: html_document
+output: 
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float: true
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 # Import libraries
 library(readr)
 library(tidyverse)
 library(gridExtra)
+library(kableExtra)
+
+# Set a consistent theme for all plots
+theme_preprocessing <- function() {
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),
+    legend.position = "bottom"
+  )
+}
 ```
 
 ## Raw Input Data Statistics
-```{r, include=FALSE}
+```{r}
 # Read in the raw input data statistics
 raw_stats_path <- file.path(snakemake@input[["raw_stats"]])
 raw_stats <- read_tsv(raw_stats_path)
@@ -24,68 +43,53 @@ raw_stats <- raw_stats %>%
   mutate(sample = gsub(".+/([^/]+)_R[12]\\.fastq\\.gz", "\\1", file))
 ```
 
-```{r, echo=FALSE, warning=FALSE}
+```{r}
 # Create boxplot for number of reads across samples
-ggplot(raw_stats, aes(x="", y=num_seqs/1000000)) +
-  geom_boxplot(outlier.shape=NA) +
-  geom_jitter(width=0.2, aes(color=sample)) +
-  theme_bw() +
-  theme(legend.position="none") +
+p1 <- ggplot(raw_stats, aes(x="All samples", y=num_seqs/1000000)) +
+  geom_boxplot(fill = "lightblue", alpha = 0.7) +
+  geom_jitter(width=0.2, color="black", alpha = 0.5, size = 1) +
+  theme_preprocessing() +
   ylab("Number of reads (millions)") +
   xlab("") +
   labs(title="Raw read counts distribution")
 
 # Create boxplot for sequence length
-ggplot(raw_stats, aes(x="", y=avg_len)) +
-  geom_boxplot(outlier.shape=NA) +
-  geom_jitter(width=0.2, aes(color=sample)) +
-  theme_bw() +
-  theme(legend.position="none") +
+p2 <- ggplot(raw_stats, aes(x="All samples", y=avg_len)) +
+  geom_boxplot(fill = "lightblue", alpha = 0.7) +
+  theme_preprocessing() +
   ylab("Average read length (bp)") +
   xlab("") +
   labs(title="Read length distribution")
 
-# Create a plot showing reads per sample
-read_counts <- raw_stats %>%
-  # Identify R1 files to avoid double-counting paired reads
-  filter(grepl("_R1\\.fastq\\.gz", file)) %>%
-  # Sort by number of reads descending
-  arrange(desc(num_seqs))
-
-ggplot(read_counts, aes(x=reorder(sample, -num_seqs), y=num_seqs/1000000)) +
-  geom_bar(stat="identity", fill="steelblue") +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle=45, hjust=1)) +
-  xlab("Sample") +
-  ylab("Number of reads (millions)") +
-  labs(title="Raw reads per sample")
+# Display the plots side by side
+grid.arrange(p1, p2, ncol=2)
 ```
 
 ## Adapters trimmed by fastp
-```{r, include=FALSE}
+```{r}
 # Read in the data
 fastp_path <- file.path(snakemake@input[["fastp"]])
 fastp <- read_tsv(fastp_path) %>%
   mutate(percent_adapter_trimmed = (adapter_cutting.adapter_trimmed_reads/summary.before_filtering.total_reads)*100)
 ```
 
-```{r, echo=FALSE, warning=FALSE}
+```{r}
 # Create the boxplot with data validation
 fastp_clean <- fastp %>%
   mutate(percent_adapter_trimmed = pmax(0, pmin(100, percent_adapter_trimmed)))
 
-ggplot(fastp_clean, aes(x="", y=percent_adapter_trimmed))+
-  geom_boxplot(outlier.shape=NA)+
-  geom_jitter(width=0.2) +
-  theme_bw() +
+ggplot(fastp_clean, aes(x="All samples", y=percent_adapter_trimmed)) +
+  geom_boxplot(fill = "lightgreen", alpha = 0.7) +
+  geom_jitter(width=0.2, color="darkgreen", alpha = 0.5, size = 1) +
+  theme_preprocessing() +
   ylab("Percent of reads trimmed") +
   xlab("") +
   scale_y_continuous(limits = c(0, 100)) +
-  labs(title="Adapter trimming")
+  labs(title="Adapter trimming by fastp")
 ```
 
 ## PrimerB contamination removal
-```{r, echo=FALSE, warning=FALSE}
+```{r}
 # Read in the data
 primer_b_path <- file.path(snakemake@input[["primer_b"]])
 primer_b <- read_tsv(primer_b_path)
@@ -105,19 +109,19 @@ max_percent <- max(c(primer_b_clean$percent_with_primerB,
                     primer_b_clean$percent_total_primerB)) * 1.1  # Add 10% margin
 
 # Create improved boxplots with adjusted scale
-p1 <- ggplot(primer_b_clean, aes(x="", y=percent_with_primerB)) +
-  geom_boxplot(outlier.shape=NA) +
-  geom_jitter(width=0.2, alpha=0.6) +
-  theme_bw() +
+p1 <- ggplot(primer_b_clean, aes(x="PrimerB", y=percent_with_primerB)) +
+  geom_boxplot(fill = "lightsalmon", alpha = 0.7) +
+  geom_jitter(width=0.2, color="darkred", alpha = 0.5, size = 1) +
+  theme_preprocessing() +
   ylab("Percent of reads") +
   xlab("") +
   scale_y_continuous(limits = c(0, max_percent)) +  # Adjusted scale
   labs(title="PrimerB contamination")
 
-p2 <- ggplot(primer_b_clean, aes(x="", y=percent_with_primerB_rc)) +
-  geom_boxplot(outlier.shape=NA) +
-  geom_jitter(width=0.2, alpha=0.6) +
-  theme_bw() +
+p2 <- ggplot(primer_b_clean, aes(x="PrimerB_rc", y=percent_with_primerB_rc)) +
+  geom_boxplot(fill = "lightsalmon", alpha = 0.7) +
+  geom_jitter(width=0.2, color="darkred", alpha = 0.5, size = 1) +
+  theme_preprocessing() +
   ylab("Percent of reads") +
   xlab("") +
   scale_y_continuous(limits = c(0, max_percent)) +  # Adjusted scale
@@ -127,17 +131,18 @@ p2 <- ggplot(primer_b_clean, aes(x="", y=percent_with_primerB_rc)) +
 grid.arrange(p1, p2, ncol=2)
 
 # Plot total PrimerB contamination with adjusted scale
-ggplot(primer_b_clean, aes(x="", y=percent_total_primerB)) +
-  geom_boxplot(outlier.shape=NA) +
-  geom_jitter(width=0.2, alpha=0.6) +
-  theme_bw() +
+ggplot(primer_b_clean, aes(x="Total", y=percent_total_primerB)) +
+  geom_boxplot(fill = "lightsalmon", alpha = 0.7) +
+  geom_jitter(width=0.2, color="darkred", alpha = 0.5, size = 1) +
+  theme_preprocessing() +
   ylab("Percent of reads with PrimerB") +
   xlab("") +
   scale_y_continuous(limits = c(0, max_percent)) +  # Adjusted scale
   labs(title="Total PrimerB contamination")
+```
 
 ## Vector contamination removal
-```{r, echo=FALSE, warning=FALSE, include=FALSE}
+```{r}
 # Read the TSV data extracted by the Python script
 vector_data_path <- file.path(snakemake@input[["vector"]])
 vector_data <- read_tsv(vector_data_path)
@@ -148,23 +153,17 @@ vector_clean <- vector_data %>%
          short_vector_label = gsub("^uv:|\\s.*$", "", top_vector))
 
 # Generate a boxplot for percentage of reads with vector contamination
-# Colored by the top vector present
-ggplot(vector_clean, aes(x = "", y = percent_with_vector, color = short_vector_label)) +
-  geom_boxplot(outlier.shape = NA) +
-  geom_jitter(width = 0.2, alpha = 0.6) +
-  theme_bw() +
+ggplot(vector_clean, aes(x = "Vector contamination", y = percent_with_vector)) +
+  geom_boxplot(fill = "thistle", alpha = 0.7) +
+  geom_jitter(width = 0.2, color = "purple4", alpha = 0.5, size = 1) +
+  theme_preprocessing() +
   ylab("Percent of reads with vector contamination") +
   xlab("") +
-  labs(title = "Vector Contamination in Reads") +
-  scale_color_discrete(name = "Top Vector") +
-  theme(legend.text = element_text(size = 10), # Adjust legend text size
-        legend.key.size = unit(0.5, "cm")) +  # Adjust size of legend boxes
-  guides(color = guide_legend(label.position = "top", label.hjust = 0.5)) +
-  scale_color_discrete(labels = function(x) str_wrap(x, width = 10))
+  labs(title = "Vector Contamination in Reads")
 ```
 
 ## BBMerge read merging statistics
-```{r, include=FALSE}
+```{r}
 # Read in the data
 bbmerge_path <- file.path(snakemake@input[["bbmerge"]])
 bbmerge <- read_tsv(bbmerge_path)
@@ -174,38 +173,40 @@ bbmerge_hist_path <- file.path(snakemake@input[["bbmerge_hist"]])
 bbmerge_hist <- read_tsv(bbmerge_hist_path)
 ```
 
-```{r, echo=FALSE, warning=FALSE}
+```{r}
 # Create the plot for percent merged with data validation
 bbmerge_clean <- bbmerge %>%
   mutate(percent_merged = pmax(0, pmin(100, percent_merged)))
 
-ggplot(bbmerge_clean, aes(x="", y=percent_merged))+
-  geom_boxplot(outlier.shape=NA)+
-  geom_jitter(width=0.2) +
-  theme_bw() +
+p1 <- ggplot(bbmerge_clean, aes(x="All samples", y=percent_merged)) +
+  geom_boxplot(fill = "lightsteelblue", alpha = 0.7) +
+  geom_jitter(width=0.2, color="darkblue", alpha = 0.5, size = 1) +
+  theme_preprocessing() +
   ylab("Percent of read pairs merged") +
   xlab("") +
   scale_y_continuous(limits = c(0, 100)) +
   labs(title="Read merging rate")
 
 # Create a plot for average insert size
-ggplot(bbmerge, aes(x="", y=avg_insert_size))+
-  geom_boxplot(outlier.shape=NA)+
-  geom_jitter(width=0.2) +
-  theme_bw() +
+p2 <- ggplot(bbmerge, aes(x="All samples", y=avg_insert_size)) +
+  geom_boxplot(fill = "lightsteelblue", alpha = 0.7) +
+  theme_preprocessing() +
   ylab("Average insert size (bp)") +
   xlab("") +
   labs(title="Insert size distribution")
+
+# Display the plots side by side
+grid.arrange(p1, p2, ncol=2)
 ```
 
 ## Host removal statistics
-```{r, include=FALSE}
+```{r}
 # Read in the data
 host_path <- file.path(snakemake@input[["host"]])
 host <- read_tsv(host_path)
 ```
 
-```{r, echo=FALSE, warning=FALSE}
+```{r}
 # Create plots for host removal
 # Add data validation to ensure percentages are within valid range (0-100)
 host_clean <- host %>%
@@ -219,19 +220,19 @@ max_y_limit <- min(100, max(host_clean$percent_host_overall) * 1.2)
 # If all values are very low, don't set an unnecessarily high limit
 if (max_y_limit < 5) max_y_limit <- 5
 
-# Plot only overall host contamination with dynamic y-axis limit
-ggplot(host_clean, aes(x="", y=percent_host_overall))+
-  geom_boxplot(outlier.shape=NA)+
-  geom_jitter(width=0.2) +
-  theme_bw() +
+# Plot overall host contamination with dynamic y-axis limit
+ggplot(host_clean, aes(x="Host contamination", y=percent_host_overall)) +
+  geom_boxplot(fill = "mistyrose", alpha = 0.7) +
+  geom_jitter(width=0.2, color="firebrick", alpha = 0.5, size = 1) +
+  theme_preprocessing() +
   ylab("Percent of reads mapped to host") +
   xlab("") +
   scale_y_continuous(limits = c(0, max_y_limit)) +
-  labs(title="Overall host contamination")
+  labs(title="Host genome contamination")
 ```
 
 ## Summary of preprocessing
-```{r, echo=FALSE, warning=FALSE}
+```{r}
 # Create a summary table of all preprocessing steps
 summary_data <- data.frame(
   Step = c(
@@ -287,8 +288,10 @@ summary_data <- rbind(
   )
 )
 
-# Display the summary table
+# Display the summary table with formatting
 knitr::kable(summary_data, 
              caption = "Summary statistics for preprocessing steps",
-             col.names = c("Preprocessing step", "Mean %", "Median %", "Min %", "Max %"))
+             col.names = c("Preprocessing step", "Mean %", "Median %", "Min %", "Max %")) %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                           full_width = FALSE)
 ```
