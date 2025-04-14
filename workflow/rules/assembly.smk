@@ -13,7 +13,20 @@ rule concatenate_merged_reads:
         os.path.join(dir["bench"], "assembly", "concat_merged.txt")
     shell:
         """
-        cat {input} > {output} 2> {log}
+        # Validate input files first
+        echo "Checking input file integrity before concatenation..." > {log}
+        for file in {input}; do
+            gzip -t "$file" || {{ echo "❌ Error: File $file failed integrity check" >> {log}; exit 1; }}
+        done
+        echo "✅ All input files passed integrity check" >> {log}
+        
+        # Use zcat and redirect to gzip to preserve file integrity
+        echo "Starting concatenation with zcat..." >> {log}
+        zcat {input} | gzip -c > {output} 2>> {log}
+        
+        # Verify output file
+        echo "Verifying output file integrity..." >> {log}
+        gzip -t {output} && echo "✅ Output file integrity verified" >> {log} || {{ echo "❌ Output file corrupted" >> {log}; exit 1; }}
         """
 
 rule concatenate_unmerged_r1:
@@ -31,7 +44,21 @@ rule concatenate_unmerged_r1:
         os.path.join(dir["bench"], "assembly", "concat_unmerged_r1.txt")
     shell:
         """
-        cat {input} > {output} 2> {log}
+        # Validate input files first
+        echo "Checking input file integrity before concatenation..." > {log}
+        for file in {input}; do
+            gzip -t "$file" || {{ echo "❌ Error: File $file failed integrity check" >> {log}; exit 1; }}
+        done
+        echo "✅ All input files passed integrity check" >> {log}
+        
+        # Use zcat and redirect to gzip to preserve file integrity
+        # This creates a new compressed file instead of concatenating compressed files directly
+        echo "Starting concatenation with zcat..." >> {log}
+        zcat {input} | gzip -c > {output} 2>> {log}
+        
+        # Verify output file
+        echo "Verifying output file integrity..." >> {log}
+        gzip -t {output} && echo "✅ Output file integrity verified" >> {log} || {{ echo "❌ Output file corrupted" >> {log}; exit 1; }}
         """
 
 rule concatenate_unmerged_r2:
@@ -49,7 +76,20 @@ rule concatenate_unmerged_r2:
         os.path.join(dir["bench"], "assembly", "concat_unmerged_r2.txt")
     shell:
         """
-        cat {input} > {output} 2> {log}
+        # Validate input files first
+        echo "Checking input file integrity before concatenation..." > {log}
+        for file in {input}; do
+            gzip -t "$file" || {{ echo "❌ Error: File $file failed integrity check" >> {log}; exit 1; }}
+        done
+        echo "✅ All input files passed integrity check" >> {log}
+        
+        # Use zcat and redirect to gzip to preserve file integrity
+        echo "Starting concatenation with zcat..." >> {log}
+        zcat {input} | gzip -c > {output} 2>> {log}
+        
+        # Verify output file
+        echo "Verifying output file integrity..." >> {log}
+        gzip -t {output} && echo "✅ Output file integrity verified" >> {log} || {{ echo "❌ Output file corrupted" >> {log}; exit 1; }}
         """
 
 rule verify_read_counts:
@@ -63,6 +103,10 @@ rule verify_read_counts:
         os.path.join(dir["env"], "pandas.yaml")
     shell:
         """
+        # Verify file integrity first
+        gzip -t {input.r1} || {{ echo "Error: R1 file corrupted" > {output.verification}; exit 1; }}
+        gzip -t {input.r2} || {{ echo "Error: R2 file corrupted" > {output.verification}; exit 1; }}
+        
         # Count reads in each file
         r1_count=$(zcat {input.r1} | wc -l | awk '{{print $1/4}}')
         r2_count=$(zcat {input.r2} | wc -l | awk '{{print $1/4}}')

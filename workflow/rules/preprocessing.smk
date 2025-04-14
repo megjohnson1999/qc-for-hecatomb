@@ -160,6 +160,11 @@ rule bbmerge:
         os.path.join(dir["bench"], "bbmerge", "{sample}_bbmerge.txt")
     shell:
         """
+        # Ensure files are valid before merging
+        gzip -t {input.r1} || {{ echo "Error: Input R1 file corrupted" >> {log}; exit 1; }}
+        gzip -t {input.r2} || {{ echo "Error: Input R2 file corrupted" >> {log}; exit 1; }}
+        
+        # Run bbmerge with pigz options for better compression handling
         bbmerge.sh \
         in1={input.r1} \
         in2={input.r2} \
@@ -167,8 +172,15 @@ rule bbmerge:
         outu1={output.unmerged1} \
         outu2={output.unmerged2} \
         ihist={output.hist} \
+        pigz=t \
+        unpigz=t \
         {params} \
         &> {log}
+        
+        # Verify that output files were created successfully
+        gzip -t {output.merged} || {{ echo "Error: Merged output file corrupted" >> {log}; exit 1; }}
+        gzip -t {output.unmerged1} || {{ echo "Error: Unmerged R1 output file corrupted" >> {log}; exit 1; }}
+        gzip -t {output.unmerged2} || {{ echo "Error: Unmerged R2 output file corrupted" >> {log}; exit 1; }}
         """
 
 rule index_host:
@@ -206,6 +218,10 @@ rule host_removal:
         os.path.join(dir["bench"], "host_removal", "{sample}_hr.txt")
     shell:
         """
+        # Check input file integrity
+        gzip -t {input.r1} || {{ echo "Error: Input R1 file corrupted" >> {log}; exit 1; }}
+        gzip -t {input.r2} || {{ echo "Error: Input R2 file corrupted" >> {log}; exit 1; }}
+        
         # Align paired reads to host genome
         minimap2 -ax sr -t {threads} {input.index} {input.r1} {input.r2} > {output.bam}
         
@@ -227,12 +243,26 @@ rule host_removal:
         # Extract paired reads, ensuring read pairing is maintained
         # The -n flag ensures proper read name matching
         # The -0 and -s flags redirect unpaired reads to /dev/null
-        samtools fastq -N -1 {output.r1_hr} -2 {output.r2_hr} -0 /dev/null -s /dev/null -n {output.sorted} 2>> {log}
+        samtools fastq -N -1 >(gzip > {output.r1_hr}) -2 >(gzip > {output.r2_hr}) -0 /dev/null -s /dev/null -n {output.sorted} 2>> {log}
         
-        # Verify that output files have equal read counts
+        # Verify that output files have equal read counts and are valid
+        echo -e "\\nVerifying output files:" >> {output.stats}
+        gzip -t {output.r1_hr} || {{ echo "Error: Output R1 file corrupted" >> {log}; exit 1; }}
+        gzip -t {output.r2_hr} || {{ echo "Error: Output R2 file corrupted" >> {log}; exit 1; }}
+        
+        # Check read counts
+        r1_count=$(zcat {output.r1_hr} | wc -l | awk '{{print $1/4}}')
+        r2_count=$(zcat {output.r2_hr} | wc -l | awk '{{print $1/4}}')
+        
         echo -e "\\nRead counts in output files:" >> {output.stats}
-        echo "R1 reads: $(zcat {output.r1_hr} | wc -l | awk '{{print $1/4}}')" >> {output.stats}
-        echo "R2 reads: $(zcat {output.r2_hr} | wc -l | awk '{{print $1/4}}')" >> {output.stats}
+        echo "R1 reads: $r1_count" >> {output.stats}
+        echo "R2 reads: $r2_count" >> {output.stats}
+        
+        # Ensure read counts match
+        if [ "$r1_count" -ne "$r2_count" ]; then
+            echo "ERROR: Unequal read counts in host-removed files!" >> {log}
+            exit 1
+        fi
         """
 
 
