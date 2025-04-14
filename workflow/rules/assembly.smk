@@ -1,7 +1,7 @@
 rule concatenate_merged_reads:
     """Concatenate all merged reads into a single file for coassembly"""
     input:
-        expand(os.path.join(dir["output"], "host_removed", "{sample}_merged_hr.fastq.gz"), sample=SAMPLES)
+        expand(os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"), sample=SAMPLES)
     output:
         os.path.join(dir["output"], "assembly", "all_merged.fastq.gz")
     threads: 4
@@ -19,7 +19,7 @@ rule concatenate_merged_reads:
 rule concatenate_unmerged_r1:
     """Concatenate all unmerged R1 reads into a single file for coassembly"""
     input:
-        expand(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R1.fastq.gz"), sample=SAMPLES)
+        expand(os.path.join(dir["output"], "bbmerge", "{sample}_R1_unmerged.fastq.gz"), sample=SAMPLES)
     output:
         os.path.join(dir["output"], "assembly", "all_unmerged_R1.fastq.gz")
     threads: 4
@@ -37,7 +37,7 @@ rule concatenate_unmerged_r1:
 rule concatenate_unmerged_r2:
     """Concatenate all unmerged R2 reads into a single file for coassembly"""
     input:
-        expand(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R2.fastq.gz"), sample=SAMPLES)
+        expand(os.path.join(dir["output"], "bbmerge", "{sample}_R2_unmerged.fastq.gz"), sample=SAMPLES)
     output:
         os.path.join(dir["output"], "assembly", "all_unmerged_R2.fastq.gz")
     threads: 4

@@ -212,17 +212,17 @@ host <- read_tsv(host_path)
 # Add data validation to ensure percentages are within valid range (0-100)
 host_clean <- host %>%
   mutate(
-    percent_host_overall = pmax(0, pmin(100, percent_host_overall))
+    percent_host = pmax(0, pmin(100, percent_host))
   )
 
 # Calculate an appropriate y-axis upper limit based on the data
 # Add a small buffer above the maximum value (20%) but don't exceed 100
-max_y_limit <- min(100, max(host_clean$percent_host_overall) * 1.2)
+max_y_limit <- min(100, max(host_clean$percent_host) * 1.2)
 # If all values are very low, don't set an unnecessarily high limit
 if (max_y_limit < 5) max_y_limit <- 5
 
 # Plot overall host contamination with dynamic y-axis limit
-ggplot(host_clean, aes(x="Host contamination", y=percent_host_overall)) +
+ggplot(host_clean, aes(x="Host contamination", y=percent_host)) +
   geom_boxplot(fill = "mistyrose", alpha = 0.7) +
   geom_jitter(width=0.2, color="firebrick", alpha = 0.5, size = 1) +
   theme_preprocessing() +
@@ -248,34 +248,33 @@ summary_data <- data.frame(
     mean(primer_b_clean$percent_total_primerB),
     mean(vector_clean$percent_with_vector),
     mean(bbmerge_clean$percent_merged),
-    mean(host_clean$percent_host_overall)
+    mean(host_clean$percent_host)
   ),
   Median_percent = c(
     median(fastp_clean$percent_adapter_trimmed),
     median(primer_b_clean$percent_total_primerB),
     median(vector_clean$percent_with_vector),
     median(bbmerge_clean$percent_merged),
-    median(host_clean$percent_host_overall)
+    median(host_clean$percent_host)
   ),
   Min_percent = c(
     min(fastp_clean$percent_adapter_trimmed),
     min(primer_b_clean$percent_total_primerB),
     min(vector_clean$percent_with_vector),
     min(bbmerge_clean$percent_merged),
-    min(host_clean$percent_host_overall)
+    min(host_clean$percent_host)
   ),
   Max_percent = c(
     max(fastp_clean$percent_adapter_trimmed),
     max(primer_b_clean$percent_total_primerB),
     max(vector_clean$percent_with_vector),
     max(bbmerge_clean$percent_merged),
-    max(host_clean$percent_host_overall)
+    max(host_clean$percent_host)
   )
 )
 
 # Format percentages to two decimal places
 summary_data[, 2:5] <- round(summary_data[, 2:5], 2)
-
 
 # Display the summary table with formatting
 knitr::kable(summary_data, 

@@ -142,8 +142,8 @@ rule remove_vector_contamination:
 
 rule bbmerge:
     input:
-        r1 = os.path.join(dir["output"], "qc", "rm_vector_contamination", "{sample}_R1_rm_vc.fastq.gz"),
-        r2 = os.path.join(dir["output"], "qc", "rm_vector_contamination", "{sample}_R2_rm_vc.fastq.gz"),
+        r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq.gz"),
+        r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq.gz"),
     output:
         merged = os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"),
         unmerged1 = os.path.join(dir["output"], "bbmerge", "{sample}_R1_unmerged.fastq.gz"),
@@ -187,17 +187,14 @@ rule index_host:
 
 rule host_removal:
     input:
-        merged = os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"),
-        unmerged1 = os.path.join(dir["output"], "bbmerge", "{sample}_R1_unmerged.fastq.gz"),
-        unmerged2 = os.path.join(dir["output"], "bbmerge", "{sample}_R2_unmerged.fastq.gz"),
+        r1 = os.path.join(dir["output"], "qc", "rm_vector_contamination", "{sample}_R1_rm_vc.fastq.gz"),
+        r2 = os.path.join(dir["output"], "qc", "rm_vector_contamination", "{sample}_R2_rm_vc.fastq.gz"),
         index = config["host_ref_indexed"]
     output:
-        merged_bam = temp(os.path.join(dir["output"], "host_removed", "{sample}_merged.bam")),
-        merged_hr = os.path.join(dir["output"], "host_removed", "{sample}_merged_hr.fastq.gz"),
-        unmerged_bam = temp(os.path.join(dir["output"], "host_removed", "{sample}_unmerged.bam")),
-        unmerged_sorted = temp(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_sorted.bam")),
-        unmerged1_hr = os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R1.fastq.gz"),
-        unmerged2_hr = os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R2.fastq.gz"),
+        bam = temp(os.path.join(dir["output"], "host_removed", "{sample}.bam")),
+        sorted = temp(os.path.join(dir["output"], "host_removed", "{sample}_sorted.bam")),
+        r1_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq.gz"),
+        r2_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq.gz")
     threads: 24
     conda:
         os.path.join(dir["env"], "minimap.yaml") 
@@ -207,15 +204,10 @@ rule host_removal:
         os.path.join(dir["bench"], "host_removal", "{sample}_hr.txt")
     shell:
         """
-        # Merged reads - filter unmapped reads (-f 4) immediately after alignment
-        minimap2 -ax sr -t {threads} {input.index} {input.merged} | samtools view -bh -f 4 -F 256 > {output.merged_bam}
-        samtools fastq {output.merged_bam} | gzip -c > {output.merged_hr}
-            
-        # Unmerged pairs - filter reads where both in pair are unmapped (-f 12)
-        # Break this into separate steps to ensure each output is properly created
-        minimap2 -ax sr -t {threads} {input.index} {input.unmerged1} {input.unmerged2} > {output.unmerged_bam}
-        samtools view -bh -f 12 -F 256 {output.unmerged_bam} | samtools sort -n > {output.unmerged_sorted}
-        samtools fastq -1 {output.unmerged1_hr} -2 {output.unmerged2_hr} -0 /dev/null -s /dev/null -n {output.unmerged_sorted}
+        # Align paired reads and filter reads where both in pair are unmapped (-f 12)
+        minimap2 -ax sr -t {threads} {input.index} {input.r1} {input.r2} > {output.bam}
+        samtools view -bh -f 12 -F 256 {output.bam} | samtools sort -n > {output.sorted}
+        samtools fastq -1 {output.r1_hr} -2 {output.r2_hr} -0 /dev/null -s /dev/null -n {output.sorted}
         """
 
 
@@ -253,9 +245,8 @@ rule bbmerge_summary:
 
 rule host_removal_summary:
     input:
-        merged = expand(os.path.join(dir["output"], "host_removed", "{sample}_merged_hr.fastq.gz"), sample=SAMPLES),
-        unmerged_R1 = expand(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R1.fastq.gz"), sample=SAMPLES),
-        unmerged_R2 = expand(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R2.fastq.gz"), sample=SAMPLES)
+        r1 = expand(os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq.gz"), sample=SAMPLES),
+        r2 = expand(os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq.gz"), sample=SAMPLES)
     output:
         os.path.join(dir["stats"], "qc", "host_removal_stats.tsv")
     conda:
