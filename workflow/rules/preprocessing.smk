@@ -193,8 +193,10 @@ rule host_removal:
     output:
         bam = temp(os.path.join(dir["output"], "host_removed", "{sample}.bam")),
         sorted = temp(os.path.join(dir["output"], "host_removed", "{sample}_sorted.bam")),
+        filtered = temp(os.path.join(dir["output"], "host_removed", "{sample}_filtered.bam")),
         r1_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq.gz"),
-        r2_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq.gz")
+        r2_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq.gz"),
+        stats = os.path.join(dir["logs"], "host_removal", "{sample}_stats.txt")
     threads: 24
     conda:
         os.path.join(dir["env"], "minimap.yaml") 
@@ -204,10 +206,33 @@ rule host_removal:
         os.path.join(dir["bench"], "host_removal", "{sample}_hr.txt")
     shell:
         """
-        # Align paired reads and filter reads where both in pair are unmapped (-f 12)
+        # Align paired reads to host genome
         minimap2 -ax sr -t {threads} {input.index} {input.r1} {input.r2} > {output.bam}
-        samtools view -bh -f 12 -F 256 {output.bam} | samtools sort -n > {output.sorted}
-        samtools fastq -1 {output.r1_hr} -2 {output.r2_hr} -0 /dev/null -s /dev/null -n {output.sorted}
+        
+        # Print initial alignment stats
+        echo "Initial alignment statistics:" > {output.stats}
+        samtools flagstat {output.bam} >> {output.stats}
+        
+        # Filter reads where both in pair are unmapped (-f 12)
+        # Also exclude secondary alignments (-F 256)
+        samtools view -bh -f 12 -F 256 {output.bam} > {output.filtered}
+        
+        # Sort by name for paired extraction
+        samtools sort -n {output.filtered} > {output.sorted}
+        
+        # Print filtered alignment stats
+        echo -e "\\nFiltered alignment statistics:" >> {output.stats}
+        samtools flagstat {output.sorted} >> {output.stats}
+        
+        # Extract paired reads, ensuring read pairing is maintained
+        # The -n flag ensures proper read name matching
+        # The -0 and -s flags redirect unpaired reads to /dev/null
+        samtools fastq -N -1 {output.r1_hr} -2 {output.r2_hr} -0 /dev/null -s /dev/null -n {output.sorted} 2>> {log}
+        
+        # Verify that output files have equal read counts
+        echo -e "\\nRead counts in output files:" >> {output.stats}
+        echo "R1 reads: $(zcat {output.r1_hr} | wc -l | awk '{{print $1/4}}')" >> {output.stats}
+        echo "R2 reads: $(zcat {output.r2_hr} | wc -l | awk '{{print $1/4}}')" >> {output.stats}
         """
 
 

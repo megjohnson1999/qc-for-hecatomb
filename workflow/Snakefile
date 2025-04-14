@@ -35,6 +35,44 @@ include: "rules/mask_host_genome.smk"
 include: "rules/assembly.smk"
 #include: "rules/host_removal.smk"
 
+rule check_host_removed_reads:
+    """Check if host-removed read pairs have equal counts"""
+    input:
+        expand(os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq.gz"), sample=SAMPLES),
+        expand(os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq.gz"), sample=SAMPLES)
+    output:
+        os.path.join(dir["stats"], "qc", "host_removed_read_counts.tsv")
+    conda:
+        os.path.join(dir["env"], "pandas.yaml")
+    shell:
+        """
+        python {workflow.basedir}/scripts/check_read_pairs.py \
+            --input-dir {dir["output"]}/host_removed \
+            --r1-pattern "*_hr_R1.fastq.gz" \
+            --r2-pattern "*_hr_R2.fastq.gz" \
+            --output {output} \
+            --stage "host_removal"
+        """
+
+rule check_unmerged_reads:
+    """Check if unmerged read pairs have equal counts"""
+    input:
+        expand(os.path.join(dir["output"], "bbmerge", "{sample}_R1_unmerged.fastq.gz"), sample=SAMPLES),
+        expand(os.path.join(dir["output"], "bbmerge", "{sample}_R2_unmerged.fastq.gz"), sample=SAMPLES)
+    output:
+        os.path.join(dir["stats"], "qc", "unmerged_read_counts.tsv")
+    conda:
+        os.path.join(dir["env"], "pandas.yaml")
+    shell:
+        """
+        python {workflow.basedir}/scripts/check_read_pairs.py \
+            --input-dir {dir["output"]}/bbmerge \
+            --r1-pattern "*_R1_unmerged.fastq.gz" \
+            --r2-pattern "*_R2_unmerged.fastq.gz" \
+            --output {output} \
+            --stage "bbmerge_unmerged"
+        """
+
 rule all:
     input:
         #expand(os.path.join(dir["output"],"{sample}_R2.fastq.gz"), sample = SAMPLES),
@@ -45,9 +83,12 @@ rule all:
         os.path.join(dir["stats"], "qc", "primer_b_stats.tsv"),
         os.path.join(dir["stats"], "qc", "vector_stats.tsv"),
         os.path.join(dir["stats"], "qc", "host_removal_stats.tsv"),
+        os.path.join(dir["stats"], "qc", "host_removed_read_counts.tsv"),
         os.path.join(dir["stats"], "qc", "bbmerge_stats.tsv"),
+        os.path.join(dir["stats"], "qc", "unmerged_read_counts.tsv"),
         os.path.join(dir["stats"], "qc", "preprocessing_plots.html"),
         #expand(os.path.join(dir["stats"], "rm_vector_contamination", "{sample}_rm_vc.stats"), sample = SAMPLES),
         expand(os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"), sample = SAMPLES),
+        os.path.join(dir["logs"], "assembly", "read_count_verification.txt"),
         os.path.join(dir["stats"], "assembly", "assembly_stats.txt"),
     default_target: True
