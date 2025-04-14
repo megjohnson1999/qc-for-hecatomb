@@ -240,12 +240,31 @@ rule host_removal:
         echo -e "\\nFiltered alignment statistics:" >> {output.stats}
         samtools flagstat {output.sorted} >> {output.stats}
         
+        # Extract paired reads directly to files without process substitution
+        # Create uncompressed files first
+        temp_r1=$(mktemp)
+        temp_r2=$(mktemp)
+        
         # Extract paired reads, ensuring read pairing is maintained
         # The -n flag ensures proper read name matching
         # The -0 and -s flags redirect unpaired reads to /dev/null
-        samtools fastq -N -1 >(gzip > {output.r1_hr}) -2 >(gzip > {output.r2_hr}) -0 /dev/null -s /dev/null -n {output.sorted} 2>> {log}
+        samtools fastq -N -1 $temp_r1 -2 $temp_r2 -0 /dev/null -s /dev/null -n {output.sorted} 2>> {log}
         
-        # Verify that output files have equal read counts and are valid
+        # Check if the extraction succeeded
+        if [ ! -s "$temp_r1" ] || [ ! -s "$temp_r2" ]; then
+            echo "Error: Failed to extract reads from BAM file" >> {log}
+            rm -f $temp_r1 $temp_r2
+            exit 1
+        fi
+        
+        # Compress files with pigz for better parallel compression
+        pigz -c $temp_r1 > {output.r1_hr} || {{ echo "Error: Failed to compress R1 file" >> {log}; exit 1; }}
+        pigz -c $temp_r2 > {output.r2_hr} || {{ echo "Error: Failed to compress R2 file" >> {log}; exit 1; }}
+        
+        # Clean up temp files
+        rm -f $temp_r1 $temp_r2
+        
+        # Verify that output files are valid
         echo -e "\\nVerifying output files:" >> {output.stats}
         gzip -t {output.r1_hr} || {{ echo "Error: Output R1 file corrupted" >> {log}; exit 1; }}
         gzip -t {output.r2_hr} || {{ echo "Error: Output R2 file corrupted" >> {log}; exit 1; }}
