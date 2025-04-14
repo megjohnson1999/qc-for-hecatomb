@@ -47,7 +47,7 @@ rule check_host_removed_reads:
     shell:
         """
         python {workflow.basedir}/scripts/check_read_pairs.py \
-            --input-dir {dir["output"]}/host_removed \
+            --input-dir {os.path.join(dir["output"], "host_removed")} \
             --r1-pattern "*_hr_R1.fastq.gz" \
             --r2-pattern "*_hr_R2.fastq.gz" \
             --output {output} \
@@ -66,7 +66,7 @@ rule check_unmerged_reads:
     shell:
         """
         python {workflow.basedir}/scripts/check_read_pairs.py \
-            --input-dir {dir["output"]}/bbmerge \
+            --input-dir {os.path.join(dir["output"], "bbmerge")} \
             --r1-pattern "*_R1_unmerged.fastq.gz" \
             --r2-pattern "*_R2_unmerged.fastq.gz" \
             --output {output} \
