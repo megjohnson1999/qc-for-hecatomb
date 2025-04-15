@@ -5,7 +5,7 @@ import pandas as pd
 import os.path
 
 def extract_host_removal_stats(r1_fastq, r2_fastq):
-    sample = os.path.basename(r1_fastq).replace('_hr_R1.fastq.gz', '')
+    sample = os.path.basename(r1_fastq).replace('_hr_R1.fastq', '')
     data = {'sample': sample}
 
     # Get stats for reads AFTER host removal using seqkit
@@ -22,8 +22,9 @@ def extract_host_removal_stats(r1_fastq, r2_fastq):
     unmapped_r2 = int(r2_values[r2_header.index('num_seqs')].replace(',', ''))
 
     # Get paths to the original files (before host removal)
-    original_r1 = r1_fastq.replace('host_removed', 'qc/rm_vector_contamination').replace('_hr_R1', '_R1_rm_vc')
-    original_r2 = r2_fastq.replace('host_removed', 'qc/rm_vector_contamination').replace('_hr_R2', '_R2_rm_vc')
+    # Handle file extension change (.fastq.gz to .fastq)
+    original_r1 = r1_fastq.replace('host_removed', 'qc/rm_vector_contamination').replace('_hr_R1.fastq', '_R1_rm_vc.fastq.gz')
+    original_r2 = r2_fastq.replace('host_removed', 'qc/rm_vector_contamination').replace('_hr_R2.fastq', '_R2_rm_vc.fastq.gz')
 
     # Get stats for reads BEFORE host removal
     if os.path.exists(original_r1) and os.path.exists(original_r2):

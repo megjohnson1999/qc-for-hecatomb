@@ -142,8 +142,8 @@ rule remove_vector_contamination:
 
 rule bbmerge:
     input:
-        r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq.gz"),
-        r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq.gz"),
+        r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
+        r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
     output:
         merged = os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"),
         unmerged1 = os.path.join(dir["output"], "bbmerge", "{sample}_R1_unmerged.fastq.gz"),
@@ -160,11 +160,11 @@ rule bbmerge:
         os.path.join(dir["bench"], "bbmerge", "{sample}_bbmerge.txt")
     shell:
         """
-        # Ensure files are valid before merging
-        gzip -t {input.r1} || {{ echo "Error: Input R1 file corrupted" >> {log}; exit 1; }}
-        gzip -t {input.r2} || {{ echo "Error: Input R2 file corrupted" >> {log}; exit 1; }}
+        # Ensure input files exist and have content
+        [ -s {input.r1} ] || {{ echo "Error: Input R1 file missing or empty" >> {log}; exit 1; }}
+        [ -s {input.r2} ] || {{ echo "Error: Input R2 file missing or empty" >> {log}; exit 1; }}
         
-        # Run bbmerge with pigz options for better compression handling
+        # Run bbmerge (with compression for output)
         bbmerge.sh \
         in1={input.r1} \
         in2={input.r2} \
@@ -173,7 +173,6 @@ rule bbmerge:
         outu2={output.unmerged2} \
         ihist={output.hist} \
         pigz=t \
-        unpigz=t \
         {params} \
         &> {log}
         
@@ -206,8 +205,8 @@ rule host_removal:
         bam = temp(os.path.join(dir["output"], "host_removed", "{sample}.bam")),
         sorted = temp(os.path.join(dir["output"], "host_removed", "{sample}_sorted.bam")),
         filtered = temp(os.path.join(dir["output"], "host_removed", "{sample}_filtered.bam")),
-        r1_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq.gz"),
-        r2_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq.gz"),
+        r1_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
+        r2_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
         stats = os.path.join(dir["logs"], "host_removal", "{sample}_stats.txt")
     threads: 24
     conda:
@@ -218,9 +217,11 @@ rule host_removal:
         os.path.join(dir["bench"], "host_removal", "{sample}_hr.txt")
     shell:
         """
-        # Check input file integrity
+        # Check input file integrity thoroughly
+        echo "Verifying input file integrity..." >> {log}
         gzip -t {input.r1} || {{ echo "Error: Input R1 file corrupted" >> {log}; exit 1; }}
         gzip -t {input.r2} || {{ echo "Error: Input R2 file corrupted" >> {log}; exit 1; }}
+        echo "Input files verified successfully" >> {log}
         
         # Align paired reads to host genome
         minimap2 -ax sr -t {threads} {input.index} {input.r1} {input.r2} > {output.bam}
@@ -240,38 +241,44 @@ rule host_removal:
         echo -e "\\nFiltered alignment statistics:" >> {output.stats}
         samtools flagstat {output.sorted} >> {output.stats}
         
-        # Extract paired reads directly to files without process substitution
-        # Create uncompressed files first
-        temp_r1=$(mktemp)
-        temp_r2=$(mktemp)
-        
-        # Extract paired reads, ensuring read pairing is maintained
+        # Extract paired reads directly to output files without compression
         # The -n flag ensures proper read name matching
         # The -0 and -s flags redirect unpaired reads to /dev/null
-        samtools fastq -N -1 $temp_r1 -2 $temp_r2 -0 /dev/null -s /dev/null -n {output.sorted} 2>> {log}
+        echo "Extracting unmapped reads to uncompressed FASTQ files..." >> {log}
+        
+        # Extract directly to output files (keeping them uncompressed)
+        samtools fastq -N -1 {output.r1_hr} -2 {output.r2_hr} -0 /dev/null -s /dev/null -n {output.sorted} 2>> {log}
         
         # Check if the extraction succeeded
-        if [ ! -s "$temp_r1" ] || [ ! -s "$temp_r2" ]; then
-            echo "Error: Failed to extract reads from BAM file" >> {log}
-            rm -f $temp_r1 $temp_r2
+        if [ ! -s "{output.r1_hr}" ] || [ ! -s "{output.r2_hr}" ]; then
+            echo "Error: Failed to extract reads from BAM file (empty files)" >> {log}
             exit 1
         fi
         
-        # Compress files with pigz for better parallel compression
-        pigz -c $temp_r1 > {output.r1_hr} || {{ echo "Error: Failed to compress R1 file" >> {log}; exit 1; }}
-        pigz -c $temp_r2 > {output.r2_hr} || {{ echo "Error: Failed to compress R2 file" >> {log}; exit 1; }}
+        # Count reads in output files to ensure they have paired content
+        r1_lines=$(wc -l < "{output.r1_hr}")
+        r2_lines=$(wc -l < "{output.r2_hr}")
+        r1_reads=$((r1_lines / 4))
+        r2_reads=$((r2_lines / 4))
         
-        # Clean up temp files
-        rm -f $temp_r1 $temp_r2
+        echo "Extracted $r1_reads reads for R1 and $r2_reads reads for R2" >> {log}
         
-        # Verify that output files are valid
+        # Verify read counts match
+        if [ "$r1_reads" -ne "$r2_reads" ]; then
+            echo "Error: Unequal read counts in extracted files (R1: $r1_reads, R2: $r2_reads)" >> {log}
+            exit 1
+        elif [ "$r1_reads" -eq 0 ]; then
+            echo "Warning: No reads extracted from BAM file (possibly no unmapped reads)" >> {log}
+        fi
+        
+        # Verify that output files exist and have content
         echo -e "\\nVerifying output files:" >> {output.stats}
-        gzip -t {output.r1_hr} || {{ echo "Error: Output R1 file corrupted" >> {log}; exit 1; }}
-        gzip -t {output.r2_hr} || {{ echo "Error: Output R2 file corrupted" >> {log}; exit 1; }}
+        [ -s {output.r1_hr} ] || {{ echo "Error: Output R1 file missing or empty" >> {log}; exit 1; }}
+        [ -s {output.r2_hr} ] || {{ echo "Error: Output R2 file missing or empty" >> {log}; exit 1; }}
         
-        # Check read counts
-        r1_count=$(zcat {output.r1_hr} | wc -l | awk '{{print $1/4}}')
-        r2_count=$(zcat {output.r2_hr} | wc -l | awk '{{print $1/4}}')
+        # Check read counts (files are no longer compressed)
+        r1_count=$(wc -l < {output.r1_hr} | awk '{{print $1/4}}')
+        r2_count=$(wc -l < {output.r2_hr} | awk '{{print $1/4}}')
         
         echo -e "\\nRead counts in output files:" >> {output.stats}
         echo "R1 reads: $r1_count" >> {output.stats}
