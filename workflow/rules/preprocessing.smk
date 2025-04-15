@@ -326,8 +326,8 @@ rule bbmerge_summary:
 
 rule host_removal_summary:
     input:
-        r1 = expand(os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq.gz"), sample=SAMPLES),
-        r2 = expand(os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq.gz"), sample=SAMPLES)
+        r1 = expand(os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"), sample=SAMPLES),
+        r2 = expand(os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"), sample=SAMPLES)
     output:
         os.path.join(dir["stats"], "qc", "host_removal_stats.tsv")
     conda:

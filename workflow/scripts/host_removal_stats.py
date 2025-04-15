@@ -22,7 +22,7 @@ def extract_host_removal_stats(r1_fastq, r2_fastq):
     unmapped_r2 = int(r2_values[r2_header.index('num_seqs')].replace(',', ''))
 
     # Get paths to the original files (before host removal)
-    # Handle file extension change (.fastq.gz to .fastq)
+    # The input files are uncompressed fastq, but the original files are compressed
     original_r1 = r1_fastq.replace('host_removed', 'qc/rm_vector_contamination').replace('_hr_R1.fastq', '_R1_rm_vc.fastq.gz')
     original_r2 = r2_fastq.replace('host_removed', 'qc/rm_vector_contamination').replace('_hr_R2.fastq', '_R2_rm_vc.fastq.gz')
 
