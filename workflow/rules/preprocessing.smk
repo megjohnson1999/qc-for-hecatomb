@@ -207,6 +207,8 @@ rule host_removal:
         filtered = temp(os.path.join(dir["output"], "host_removed", "{sample}_filtered.bam")),
         r1_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
         r2_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
+        temp_r1 = temp(os.path.join(dir["output"], "host_removed", "{sample}_temp_R1.fastq")),
+        temp_r2 = temp(os.path.join(dir["output"], "host_removed", "{sample}_temp_R2.fastq")),
         stats = os.path.join(dir["logs"], "host_removal", "{sample}_stats.txt")
     threads: 24
     conda:
@@ -224,7 +226,8 @@ rule host_removal:
         echo "Input files verified successfully" >> {log}
         
         # Align paired reads to host genome
-        minimap2 -ax sr -t {threads} {input.index} {input.r1} {input.r2} > {output.bam}
+        echo "Aligning reads to host genome..." >> {log}
+        minimap2 -ax sr -t {threads} {input.index} {input.r1} {input.r2} 2>> {log} > {output.bam}
         
         # Print initial alignment stats
         echo "Initial alignment statistics:" > {output.stats}
@@ -232,32 +235,30 @@ rule host_removal:
         
         # Filter reads where both in pair are unmapped (-f 12)
         # Also exclude secondary alignments (-F 256)
+        echo "Filtering unmapped reads..." >> {log}
         samtools view -bh -f 12 -F 256 {output.bam} > {output.filtered}
         
         # Sort by name for paired extraction
+        echo "Sorting by read name..." >> {log}
         samtools sort -n {output.filtered} > {output.sorted}
         
         # Print filtered alignment stats
         echo -e "\\nFiltered alignment statistics:" >> {output.stats}
         samtools flagstat {output.sorted} >> {output.stats}
         
-        # Extract paired reads directly to output files without compression
-        # The -n flag ensures proper read name matching
-        # The -0 and -s flags redirect unpaired reads to /dev/null
-        echo "Extracting unmapped reads to uncompressed FASTQ files..." >> {log}
-        
-        # Extract directly to output files (keeping them uncompressed)
-        samtools fastq -N -1 {output.r1_hr} -2 {output.r2_hr} -0 /dev/null -s /dev/null -n {output.sorted} 2>> {log}
+        # Extract paired reads to temporary files first
+        echo "Extracting unmapped reads to temporary files..." >> {log}
+        samtools fastq -N -1 {output.temp_r1} -2 {output.temp_r2} -0 /dev/null -s /dev/null -n {output.sorted} 2>> {log}
         
         # Check if the extraction succeeded
-        if [ ! -s "{output.r1_hr}" ] || [ ! -s "{output.r2_hr}" ]; then
+        if [ ! -s "{output.temp_r1}" ] || [ ! -s "{output.temp_r2}" ]; then
             echo "Error: Failed to extract reads from BAM file (empty files)" >> {log}
             exit 1
         fi
         
-        # Count reads in output files to ensure they have paired content
-        r1_lines=$(wc -l < "{output.r1_hr}")
-        r2_lines=$(wc -l < "{output.r2_hr}")
+        # Count reads in temporary files to ensure they have paired content
+        r1_lines=$(wc -l < "{output.temp_r1}")
+        r2_lines=$(wc -l < "{output.temp_r2}")
         r1_reads=$((r1_lines / 4))
         r2_reads=$((r2_lines / 4))
         
@@ -271,12 +272,17 @@ rule host_removal:
             echo "Warning: No reads extracted from BAM file (possibly no unmapped reads)" >> {log}
         fi
         
+        # Copy temporary files to final output locations using cat for safety
+        echo "Copying to final output files..." >> {log}
+        cat {output.temp_r1} > {output.r1_hr}
+        cat {output.temp_r2} > {output.r2_hr}
+        
         # Verify that output files exist and have content
         echo -e "\\nVerifying output files:" >> {output.stats}
         [ -s {output.r1_hr} ] || {{ echo "Error: Output R1 file missing or empty" >> {log}; exit 1; }}
         [ -s {output.r2_hr} ] || {{ echo "Error: Output R2 file missing or empty" >> {log}; exit 1; }}
         
-        # Check read counts (files are no longer compressed)
+        # Double-check read counts in final files
         r1_count=$(wc -l < {output.r1_hr} | awk '{{print $1/4}}')
         r2_count=$(wc -l < {output.r2_hr} | awk '{{print $1/4}}')
         
@@ -289,6 +295,8 @@ rule host_removal:
             echo "ERROR: Unequal read counts in host-removed files!" >> {log}
             exit 1
         fi
+        
+        echo "Host removal completed successfully for sample {wildcards.sample}" >> {log}
         """
 
 
