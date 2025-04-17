@@ -36,5 +36,7 @@ set-resources:
     megahit_assembly:
         mem: 300G
         runtime: 4000
+    map_reads_to_contigs:
+        mem: 64G
     generate_per_sample_coverage:
         mem: 64G
