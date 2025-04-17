@@ -114,6 +114,17 @@ def detect_chimeric_contigs(df, min_coverage, min_windows, sample_names):
     """Detect potentially chimeric contigs by identifying regions where different
     samples contribute coverage to different parts of the same contig."""
     
+    # TEMPORARY: Add logging of parameter values to help with debugging
+    logging.info(f"Running with parameters: min_coverage={min_coverage}, min_windows={min_windows}")
+    
+    # TEMPORARY: Lower thresholds for testing but preserve original values
+    original_min_coverage = min_coverage
+    original_min_windows = min_windows
+    min_coverage = 2  # Lower threshold to detect more potential regions
+    min_windows = 2   # Require fewer consecutive windows
+    
+    logging.info(f"TEMPORARY DEBUG: Using reduced thresholds: min_coverage={min_coverage}, min_windows={min_windows}")
+    
     chimeric_contigs = []
     heatmap_data = []
     
@@ -124,6 +135,9 @@ def detect_chimeric_contigs(df, min_coverage, min_windows, sample_names):
         if len(contig_df) < 5:  # Skip very short contigs
             continue
         
+        # TEMPORARY: Add more detailed logging
+        logging.info(f"Analyzing contig {contig} with {len(contig_df)} windows")
+        
         # Create a matrix of coverage values for visualization
         matrix_rows = []
         for _, row in contig_df.iterrows():
@@ -132,12 +146,20 @@ def detect_chimeric_contigs(df, min_coverage, min_windows, sample_names):
         
         coverage_matrix = np.array(matrix_rows)
         
+        # TEMPORARY: Log coverage stats
+        max_coverage = np.max(coverage_matrix)
+        avg_coverage = np.mean(coverage_matrix)
+        logging.info(f"  Max coverage: {max_coverage:.2f}, Average coverage: {avg_coverage:.2f}")
+        
         # Determine which sample contributes the most to each window
         dominant_samples = []
         for i, row in enumerate(coverage_matrix):
             if np.max(row) >= min_coverage:
                 dominant_sample = sample_names[np.argmax(row)]
                 dominant_samples.append((i, dominant_sample, np.max(row)))
+        
+        # TEMPORARY: Log result of dominant sample detection
+        logging.info(f"  Found {len(dominant_samples)} windows with dominant samples (coverage >= {min_coverage})")
         
         # Check for changes in the dominant sample along the contig
         sample_regions = defaultdict(list)
@@ -163,6 +185,11 @@ def detect_chimeric_contigs(df, min_coverage, min_windows, sample_names):
         if current_sample is not None and current_count >= min_windows:
             sample_regions[current_sample].append((current_start, len(dominant_samples)-1))
         
+        # TEMPORARY: Log region detection
+        logging.info(f"  Detected regions from {len(sample_regions)} different samples")
+        for sample, regions in sample_regions.items():
+            logging.info(f"    Sample {sample}: {len(regions)} regions")
+        
         # Check if we have regions from different samples
         if len(sample_regions) > 1:
             region_info = []
@@ -183,6 +210,12 @@ def detect_chimeric_contigs(df, min_coverage, min_windows, sample_names):
                     heatmap_data.append(heatmap_row)
     
     logging.info(f"Detected {len(chimeric_contigs)} potentially chimeric contigs")
+    
+    # TEMPORARY: Note about using reduced thresholds
+    if len(chimeric_contigs) > 0:
+        logging.info("IMPORTANT: Results were generated with reduced thresholds for testing")
+        logging.info(f"Original values: min_coverage={original_min_coverage}, min_windows={original_min_windows}")
+    
     return chimeric_contigs, heatmap_data
 
 def main():
