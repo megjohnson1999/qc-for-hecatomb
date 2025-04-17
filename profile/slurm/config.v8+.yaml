@@ -39,4 +39,4 @@ set-resources:
     map_reads_to_contigs:
         mem: 64G
     generate_per_sample_coverage:
-        mem: 64G
+        mem: 100G
