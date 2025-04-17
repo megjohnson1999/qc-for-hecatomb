@@ -70,10 +70,14 @@ rule generate_per_sample_coverage:
         # Create output directory
         mkdir -p $(dirname {output.coverage})
 
-        # Define sample-specific temporary files
-        temp_seqkit_output="{wildcards.sample}_temp_seqkit_output.tab"
-        temp_contigs="{wildcards.sample}_temp_contigs.bed"
-        temp_windows="{wildcards.sample}_temp_windows.bed"
+        # Create temporary directory for sample-specific files
+        temp_dir=$(dirname {log})/temp_{wildcards.sample}
+        mkdir -p $temp_dir
+
+        # Define sample-specific temporary files with absolute paths
+        temp_seqkit_output="$temp_dir/{wildcards.sample}_temp_seqkit_output.tab"
+        temp_contigs="$temp_dir/{wildcards.sample}_temp_contigs.bed"
+        temp_windows="$temp_dir/{wildcards.sample}_temp_windows.bed"
     
         # Get contig lengths correctly
         echo "Getting contig lengths" >> {log}
@@ -85,7 +89,7 @@ rule generate_per_sample_coverage:
     
         # Extract relevant columns and convert to BED format
         echo "Converting to BED format" >> {log}
-        awk '{{print $1 "\\t0\\t" $NF}}' $temp_seqkit_output > $temp_contigs 2>> {log}  
+        awk '{{print $1 "\t0\t" $NF}}' $temp_seqkit_output > $temp_contigs 2>> {log}  
         
         # Inspect output
         echo "First 10 lines of $temp_contigs:" >> {log}
@@ -105,7 +109,7 @@ rule generate_per_sample_coverage:
     
         # Clean up temporary files
         echo "Cleaning up" >> {log}
-        rm $temp_seqkit_output $temp_contigs $temp_windows
+        rm -rf $temp_dir
     
         echo "Done" >> {log}
         """
