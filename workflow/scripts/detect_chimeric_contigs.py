@@ -151,6 +151,13 @@ def detect_chimeric_contigs(df, min_coverage, min_windows, sample_names):
         avg_coverage = np.mean(coverage_matrix)
         logging.info(f"  Max coverage: {max_coverage:.2f}, Average coverage: {avg_coverage:.2f}")
         
+        # Always add heatmap data for this contig, regardless of chimeric status
+        for i, row in contig_df.iterrows():
+            heatmap_row = [contig, row['start'], row['end']]
+            for sample in sample_names:
+                heatmap_row.append(row[sample])
+            heatmap_data.append(heatmap_row)
+        
         # Determine which sample contributes the most to each window
         dominant_samples = []
         for i, row in enumerate(coverage_matrix):
@@ -201,13 +208,6 @@ def detect_chimeric_contigs(df, min_coverage, min_windows, sample_names):
             
             if len(region_info) >= 2:
                 chimeric_contigs.append((contig, "; ".join(region_info)))
-                
-                # Create heatmap data
-                for i, row in contig_df.iterrows():
-                    heatmap_row = [contig, row['start'], row['end']]
-                    for sample in sample_names:
-                        heatmap_row.append(row[sample])
-                    heatmap_data.append(heatmap_row)
     
     logging.info(f"Detected {len(chimeric_contigs)} potentially chimeric contigs")
     
