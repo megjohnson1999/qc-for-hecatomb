@@ -184,7 +184,7 @@ rule align_host_removed_reads:
         r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
         index = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
     output:
-        bam = os.path.join(dir["output"], "host_removed", "{sample}_to_contig.bam"),
+        bam_index = os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam.bai"),
         sorted_bam = os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam")
     threads: 24
     conda:
