@@ -201,18 +201,35 @@ rule align_host_removed_reads:
         samtools index {output.sorted_bam}
         """
 
+rule merge_bams:
+    input:
+        expand(os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam"), sample=SAMPLES)
+    output:
+        merged_bam = os.path.join(dir["output"], "host_removed", "merged.bam")
+    threads: 8
+    conda:
+        os.path.join(dir["env"], "minimap.yaml")
+    log:
+        os.path.join(dir["logs"], "host_removed", "merge_bams.log")
+    shell:
+        """
+        samtools merge -@ {threads} {output.merged_bam} {input}
+        """
+
 rule generate_pileup:
     input:
-        bam = os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam"),
+        bam = os.path.join(dir["output"], "host_removed", "merged.bam"),
         reference = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
     output:
-        pileup = os.path.join(dir["output"], "host_removed", "{sample}.pileup")
+        pileup = os.path.join(dir["output"], "host_removed", "merged.pileup")
     log:
-        os.path.join(dir["logs"], "host_removed", "{sample}_pileup.log")
+        os.path.join(dir["logs"], "host_removed", "merged_pileup.log")
     params:
         extra = "-d 10000"
-    wrapper:
-        "v1.2.1/bio/samtools/mpileup"
+    shell:
+        """
+        samtools mpileup {params.extra} -f {input.reference} {input.bam} > {output.pileup} 2> {log}
+        """
 
 
 rule assembly_stats:
