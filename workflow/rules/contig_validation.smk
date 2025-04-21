@@ -1,9 +1,21 @@
+def get_contigs_path(wildcards):
+    if config.get("assembly_strategy", "coassembly") == "coassembly":
+        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
+    else:
+        return os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
+
+def get_contigs_mmi_path(wildcards):
+    if config.get("assembly_strategy", "coassembly") == "coassembly":
+        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
+    else:
+        return os.path.join(dir["output"], "assembly", "flye", "assembly.mmi")
+
 rule map_reads_to_contigs:
     """Map host-removed reads back to contigs to evaluate assembly quality"""
     input:
         r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
         r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
-        idx = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
+        idx = get_contigs_mmi_path
     output:
         bam = os.path.join(dir["output"], "contig_validation", "mapping", "{sample}.bam"),
         sorted = os.path.join(dir["output"], "contig_validation", "mapping", "{sample}.sorted.bam"),
@@ -35,7 +47,7 @@ rule generate_per_sample_coverage:
     """Generate per-sample coverage in 1kb windows for each contig"""
     input:
         bam = os.path.join(dir["output"], "contig_validation", "mapping", "{sample}.sorted.bam"),
-        contigs = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
+        contigs = get_contigs_path
     output:
         coverage = os.path.join(dir["stats"], "contig_validation", "coverage", "{sample}_window_coverage.bed")
     params:
@@ -100,7 +112,7 @@ rule detect_chimeric_contigs:
     """Detect chimeric contigs by analyzing per-sample coverage patterns along contigs"""
     input:
         coverages = expand(os.path.join(dir["stats"], "contig_validation", "coverage", "{sample}_window_coverage.bed"), sample=SAMPLES),
-        contigs = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
+        contigs = get_contigs_path
     output:
         chimeric = os.path.join(dir["stats"], "contig_validation", "chimeric", "chimeric_contigs.txt"),
         heatmap = os.path.join(dir["stats"], "contig_validation", "chimeric", "chimeric_contigs_heatmap.txt")

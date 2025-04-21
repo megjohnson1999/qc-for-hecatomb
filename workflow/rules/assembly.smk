@@ -126,7 +126,22 @@ rule verify_read_counts:
         fi
         """
 
-rule megahit_assembly:
+# Add conditional logic to determine which assembly rules to run
+def assembly_mode_choose_contigs(wildcards):
+    if config.get("assembly_strategy", "coassembly") == "coassembly":
+        # For coassembly, we need concatenated files
+        return [
+            os.path.join(dir["output"], "assembly", "all_merged.fastq.gz"),
+            os.path.join(dir["output"], "assembly", "all_unmerged_R1.fastq.gz"),
+            os.path.join(dir["output"], "assembly", "all_unmerged_R2.fastq.gz")
+        ]
+    else:
+        # For individual assemblies, we need all per-sample assemblies and the merged Flye assembly
+        return [
+            os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
+        ]
+
+rule megahit_coassembly:
     """Perform coassembly of all samples using MEGAHIT"""
     input:
         merged = os.path.join(dir["output"], "assembly", "all_merged.fastq.gz"),
@@ -159,13 +174,105 @@ rule megahit_assembly:
             &>> {log}
         """
 
+rule megahit_individual_assembly:
+    """Perform assembly of individual samples using MEGAHIT"""
+    input:
+        merged = os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"),
+        r1 = os.path.join(dir["output"], "bbmerge", "{sample}_R1_unmerged.fastq.gz"),
+        r2 = os.path.join(dir["output"], "bbmerge", "{sample}_R2_unmerged.fastq.gz")
+    output:
+        contigs = os.path.join(dir["output"], "assembly", "per_sample", "{sample}", "final.contigs.fa"),
+        dir = directory(os.path.join(dir["output"], "assembly", "per_sample", "{sample}"))
+    params:
+        min_contig = 1000,
+        out_dir = os.path.join(dir["output"], "assembly", "per_sample", "{sample}")
+    threads: 16
+    conda:
+        os.path.join(dir["env"], "megahit.yaml")
+    log:
+        os.path.join(dir["logs"], "assembly", "per_sample", "{sample}_megahit.log")
+    benchmark:
+        os.path.join(dir["bench"], "assembly", "per_sample", "{sample}_megahit.txt")
+    shell:
+        """
+        # Remove output directory if it exists since megahit won't overwrite
+        rm -rf {params.out_dir}
+        
+        # Run megahit
+        megahit -r {input.merged} -1 {input.r1} -2 {input.r2} \
+            -o {params.out_dir} \
+            --min-contig-len {params.min_contig} \
+            --k-list 21,29,39,59,79,99,119,141 \
+            -t {threads} \
+            &>> {log}
+        """
+
+rule collect_individual_assemblies:
+    """Collect individual assembly contigs for merging with Flye"""
+    input:
+        expand(os.path.join(dir["output"], "assembly", "per_sample", "{sample}", "final.contigs.fa"), sample=SAMPLES)
+    output:
+        directory(os.path.join(dir["output"], "assembly", "per_sample", "contigs"))
+    log:
+        os.path.join(dir["logs"], "assembly", "collect_individual_assemblies.log")
+    shell:
+        """
+        # Create output directory
+        mkdir -p {output} 2> {log}
+        
+        # Copy each assembly with a unique name
+        for file in {input}; do
+            sample=$(echo $file | rev | cut -d/ -f2 | rev)
+            cp $file {output}/$sample.contigs.fa 2>> {log}
+        done
+        """
+
+rule flye_merge_assemblies:
+    """Merge individual assemblies using Flye subassemblies mode"""
+    input:
+        contig_dir = os.path.join(dir["output"], "assembly", "per_sample", "contigs")
+    output:
+        contigs = os.path.join(dir["output"], "assembly", "flye", "assembly.fasta"),
+        dir = directory(os.path.join(dir["output"], "assembly", "flye"))
+    params:
+        out_dir = os.path.join(dir["output"], "assembly", "flye"),
+        min_contig = 1000
+    threads: 24
+    conda:
+        os.path.join(dir["env"], "flye.yaml")
+    log:
+        os.path.join(dir["logs"], "assembly", "flye_merge.log")
+    benchmark:
+        os.path.join(dir["bench"], "assembly", "flye_merge.txt")
+    shell:
+        """
+        # Create a list of all contig files
+        find {input.contig_dir} -name "*.contigs.fa" > contig_files.txt
+        
+        # Run flye in subassemblies mode
+        flye --subassemblies @contig_files.txt \
+            --out-dir {params.out_dir} \
+            --min-overlap 500 \
+            --threads {threads} \
+            &> {log}
+            
+        # Remove temporary file
+        rm contig_files.txt
+        """
+
+
+def get_contigs_mmi_path(wildcards):
+    if config.get("assembly_strategy", "coassembly") == "coassembly":
+        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
+    else:
+        return os.path.join(dir["output"], "assembly", "flye", "assembly.mmi")
 
 rule index_contigs:
     """Index contigs using minimap2 for read mapping"""
     input:
-        os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
+        get_assembly_path
     output:
-        os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
+        get_contigs_mmi_path
     threads: 12
     conda:
         os.path.join(dir["env"], "minimap_env.yaml")
@@ -182,7 +289,7 @@ rule align_host_removed_reads:
     input:
         r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
         r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
-        index = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
+        index = get_contigs_mmi_path
     output:
         bam_index = os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam.bai"),
         sorted_bam = os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam")
@@ -219,7 +326,7 @@ rule merge_bams:
 rule generate_pileup:
     input:
         bam = os.path.join(dir["output"], "host_removed", "merged.bam"),
-        reference = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
+        reference = get_assembly_path
     output:
         pileup = os.path.join(dir["output"], "host_removed", "merged.pileup")
     log:
@@ -232,10 +339,16 @@ rule generate_pileup:
         """
 
 
+def get_assembly_path(wildcards):
+    if config.get("assembly_strategy", "coassembly") == "coassembly":
+        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
+    else:
+        return os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
+
 rule assembly_stats:
     """Calculate assembly statistics"""
     input:
-        os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
+        get_assembly_path
     output:
         stats = os.path.join(dir["stats"], "assembly", "assembly_stats.txt")
     conda:

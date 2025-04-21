@@ -38,10 +38,18 @@ If your fastq files have any suffixes other than _R1.fastq.gz and _R2.fastq.gz, 
  - fastq_names_1: default is "{sample}_R1.fastq.gz"
 
  - fastq_names_2: default is "{sample}_R2.fastq.gz"
+ 
+ - assembly_strategy: Choice of assembly approach (default: "coassembly")
+   - "coassembly": Performs a single assembly with all samples combined (default)
+   - "individual": Assembles each sample separately and then merges assemblies using Flye
 
 
-### Example command:
+### Example commands:
 
 ```
+# Default coassembly
 snakemake --profile ../profile/slurm/ --config reads=/scratch/sahlab/Megan/test_reads output=/scratch/sahlab/Megan/pipeline_test.out
+
+# Individual assembly with Flye merging
+snakemake --profile ../profile/slurm/ --config reads=/scratch/sahlab/Megan/test_reads output=/scratch/sahlab/Megan/pipeline_test.out assembly_strategy=individual
 ```

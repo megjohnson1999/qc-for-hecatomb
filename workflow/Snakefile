@@ -36,22 +36,33 @@ include: "rules/assembly.smk"
 include: "rules/contig_validation.smk"
 #include: "rules/host_removal.smk"
 
-rule all:
-    input:
-        #expand(os.path.join(dir["output"],"{sample}_R2.fastq.gz"), sample = SAMPLES),
+def get_assembly_inputs(wildcards):
+    inputs = [
         os.path.join(dir["stats"], "raw_input_data", "basic_stats.txt"),
-        #os.path.join(dir["stats"], "raw_input_data", "multiqc_report.html"),
-        #expand(os.path.join(dir["output"], "fastp", "{sample}_R2_trimmed.fastq.gz"), sample = SAMPLES),
         os.path.join(dir["stats"], "qc", "fastp_stats.tsv"),
         os.path.join(dir["stats"], "qc", "primer_b_stats.tsv"),
         os.path.join(dir["stats"], "qc", "vector_stats.tsv"),
         os.path.join(dir["stats"], "qc", "host_removal_stats.tsv"),
-        #os.path.join(dir["stats"], "qc", "bbmerge_stats.tsv"),
         os.path.join(dir["stats"], "qc", "preprocessing_plots.html"),
-        #expand(os.path.join(dir["stats"], "rm_vector_contamination", "{sample}_rm_vc.stats"), sample = SAMPLES),
-        #expand(os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"), sample = SAMPLES),
-        #os.path.join(dir["logs"], "assembly", "read_count_verification.txt"),
         os.path.join(dir["stats"], "assembly", "assembly_stats.txt"),
         os.path.join(dir["stats"], "contig_validation", "contig_validation_summary.txt"),
         os.path.join(dir["output"], "host_removed", "merged.pileup")
+    ]
+    
+    # Add strategy-specific inputs
+    if config.get("assembly_strategy", "coassembly") == "coassembly":
+        # For coassembly, we need the MEGAHIT output
+        inputs.append(os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa"))
+    else:
+        # For individual assembly, we need all per-sample assemblies and the merged Flye assembly
+        inputs.extend([
+            expand(os.path.join(dir["output"], "assembly", "per_sample", "{sample}", "final.contigs.fa"), sample=SAMPLES),
+            os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
+        ])
+        
+    return inputs
+
+rule all:
+    input:
+        get_assembly_inputs
     default_target: True
