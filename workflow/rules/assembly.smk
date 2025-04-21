@@ -160,21 +160,22 @@ rule megahit_assembly:
         """
 
 
-rule build_minimap_index:
+rule index_contigs:
+    """Index contigs using minimap2 for read mapping"""
     input:
-        reference = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
+        os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
     output:
-        index = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
-    threads: 8
+        os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
+    threads: 12
     conda:
-        os.path.join(dir["env"], "minimap.yaml")
+        os.path.join(dir["env"], "minimap_env.yaml")
     log:
-        os.path.join(dir["logs"], "indexes", "minimap2_index.log")
+        os.path.join(dir["logs"], "contig_validation", "index_contigs.log")
     benchmark:
-        os.path.join(dir["bench"], "indexes", "minimap2_index.txt")
+        os.path.join(dir["bench"], "contig_validation", "index_contigs.txt")
     shell:
         """
-        minimap2 -t {threads} -d {output.index} {input.reference} 2> {log}
+        minimap2 -d {output} {input} 2> {log}
         """
 
 rule align_host_removed_reads:
