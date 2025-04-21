@@ -52,5 +52,6 @@ rule all:
         #expand(os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"), sample = SAMPLES),
         #os.path.join(dir["logs"], "assembly", "read_count_verification.txt"),
         os.path.join(dir["stats"], "assembly", "assembly_stats.txt"),
-        os.path.join(dir["stats"], "contig_validation", "contig_validation_summary.txt")   
+        os.path.join(dir["stats"], "contig_validation", "contig_validation_summary.txt"),
+        os.path.join(dir["output"], "host_removed", "{sample}.pileup")
     default_target: True
