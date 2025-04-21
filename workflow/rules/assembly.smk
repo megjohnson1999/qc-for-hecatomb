@@ -160,6 +160,43 @@ rule megahit_assembly:
         """
 
 
+rule align_host_removed_reads:
+    input:
+        r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
+        r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
+        index = config["contig_index"]
+    output:
+        bam = os.path.join(dir["output"], "host_removed", "{sample}.bam"),
+        sorted_bam = os.path.join(dir["output"], "host_removed", "{sample}_sorted.bam")
+    threads: 24
+    conda:
+        os.path.join(dir["env"], "minimap.yaml")
+    log:
+        os.path.join(dir["logs"], "host_removed", "{sample}_alignment.log")
+    benchmark:
+        os.path.join(dir["bench"], "host_removed", "{sample}_alignment.txt")
+    shell:
+        """
+        minimap2 -ax sr -t {threads} {input.index} {input.r1} {input.r2} | \
+        samtools view -Sb - | \
+        samtools sort -o {output.sorted_bam} - && \
+        samtools index {output.sorted_bam}
+        """
+
+rule generate_pileup:
+    input:
+        bam = os.path.join(dir["output"], "host_removed", "{sample}_sorted.bam"),
+        reference = config["contig_fasta"]
+    output:
+        pileup = os.path.join(dir["output"], "host_removed", "{sample}.pileup")
+    log:
+        os.path.join(dir["logs"], "host_removed", "{sample}_pileup.log")
+    params:
+        extra = "-d 10000"
+    wrapper:
+        "v1.2.1/bio/samtools/mpileup"
+
+
 rule assembly_stats:
     """Calculate assembly statistics"""
     input:
