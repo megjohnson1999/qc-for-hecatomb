@@ -160,11 +160,28 @@ rule megahit_assembly:
         """
 
 
+rule build_minimap_index:
+    input:
+        reference = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
+    output:
+        index = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
+    threads: 8
+    conda:
+        os.path.join(dir["env"], "minimap.yaml")
+    log:
+        os.path.join(dir["logs"], "indexes", "minimap2_index.log")
+    benchmark:
+        os.path.join(dir["bench"], "indexes", "minimap2_index.txt")
+    shell:
+        """
+        minimap2 -t {threads} -d {output.index} {input.reference} 2> {log}
+        """
+
 rule align_host_removed_reads:
     input:
         r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
         r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
-        index = config["contig_index"]
+        index = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
     output:
         bam = os.path.join(dir["output"], "host_removed", "{sample}.bam"),
         sorted_bam = os.path.join(dir["output"], "host_removed", "{sample}_sorted.bam")
@@ -186,7 +203,7 @@ rule align_host_removed_reads:
 rule generate_pileup:
     input:
         bam = os.path.join(dir["output"], "host_removed", "{sample}_sorted.bam"),
-        reference = config["contig_fasta"]
+        reference = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
     output:
         pileup = os.path.join(dir["output"], "host_removed", "{sample}.pileup")
     log:
