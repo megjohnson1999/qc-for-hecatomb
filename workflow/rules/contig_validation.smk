@@ -1,21 +1,3 @@
-rule index_contigs:
-    """Index contigs using minimap2 for read mapping"""
-    input:
-        os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
-    output:
-        os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
-    threads: 12
-    conda:
-        os.path.join(dir["env"], "minimap_env.yaml")
-    log:
-        os.path.join(dir["logs"], "contig_validation", "index_contigs.log")
-    benchmark:
-        os.path.join(dir["bench"], "contig_validation", "index_contigs.txt")
-    shell:
-        """
-        minimap2 -d {output} {input} 2> {log}
-        """
-
 rule map_reads_to_contigs:
     """Map host-removed reads back to contigs to evaluate assembly quality"""
     input:
