@@ -63,6 +63,17 @@ def get_assembly_inputs(wildcards):
         
     return inputs
 
+# Create a list for assembly-specific outputs based on strategy
+assembly_outputs = []
+if config.get("assembly_strategy", "coassembly") == "coassembly":
+    # For coassembly
+    assembly_outputs.append(os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa"))
+else:
+    # For individual assembly
+    for sample in SAMPLES:
+        assembly_outputs.append(os.path.join(dir["output"], "assembly", "per_sample", sample, "final.contigs.fa"))
+    assembly_outputs.append(os.path.join(dir["output"], "assembly", "flye", "assembly.fasta"))
+
 rule all:
     input:
         # Common inputs for all strategies
@@ -75,19 +86,6 @@ rule all:
         os.path.join(dir["stats"], "assembly", "assembly_stats.txt"),
         os.path.join(dir["stats"], "contig_validation", "contig_validation_summary.txt"),
         os.path.join(dir["output"], "host_removed", "merged.pileup"),
-        
-        # Strategy-specific inputs wrapped individually in lambda functions
-        lambda wildcards: os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa") 
-            if config.get("assembly_strategy", "coassembly") == "coassembly" 
-            else [],
-        
-        # Per-sample assemblies for individual strategy
-        lambda wildcards: expand(os.path.join(dir["output"], "assembly", "per_sample", "{sample}", "final.contigs.fa"), sample=SAMPLES)
-            if config.get("assembly_strategy", "individual") == "individual"
-            else [],
-            
-        # Flye merged assembly for individual strategy
-        lambda wildcards: os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
-            if config.get("assembly_strategy", "individual") == "individual"
-            else []
+        # Add strategy-specific outputs
+        assembly_outputs
     default_target: True

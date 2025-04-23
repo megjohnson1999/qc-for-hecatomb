@@ -277,9 +277,9 @@ def get_contigs_mmi_path(wildcards):
 rule index_contigs:
     """Index contigs using minimap2 for read mapping"""
     input:
-        lambda wildcards: get_assembly_path(wildcards)
+        get_assembly_path
     output:
-        lambda wildcards: get_contigs_mmi_path(wildcards)
+        get_contigs_mmi_path
     threads: 12
     conda:
         os.path.join(dir["env"], "minimap_env.yaml")
@@ -296,7 +296,7 @@ rule align_host_removed_reads:
     input:
         r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
         r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
-        index = lambda wildcards: get_contigs_mmi_path(wildcards)
+        index = get_contigs_mmi_path
     output:
         bam_index = os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam.bai"),
         sorted_bam = os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam")
@@ -333,7 +333,7 @@ rule merge_bams:
 rule generate_pileup:
     input:
         bam = os.path.join(dir["output"], "host_removed", "merged.bam"),
-        reference = lambda wildcards: get_assembly_path(wildcards)
+        reference = get_assembly_path
     output:
         pileup = os.path.join(dir["output"], "host_removed", "merged.pileup")
     log:
@@ -349,7 +349,7 @@ rule generate_pileup:
 rule assembly_stats:
     """Calculate assembly statistics"""
     input:
-        lambda wildcards: get_assembly_path(wildcards)
+        get_assembly_path
     output:
         stats = os.path.join(dir["stats"], "assembly", "assembly_stats.txt")
     conda:
