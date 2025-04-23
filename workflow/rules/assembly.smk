@@ -126,36 +126,7 @@ rule verify_read_counts:
         fi
         """
 
-def get_assembly_input(wildcards):
-    """Return assembly input files based on the assembly strategy.
-    
-    This function should only be used in a rule that knows which keys to expect
-    for the current assembly strategy.
-    """
-    strategy = config.get("assembly_strategy", "coassembly")
-    result = {}
-    
-    if strategy == "coassembly":
-        result = {
-            "merged": os.path.join(dir["output"], "assembly", "all_merged.fastq.gz"),
-            "r1": os.path.join(dir["output"], "assembly", "all_unmerged_R1.fastq.gz"),
-            "r2": os.path.join(dir["output"], "assembly", "all_unmerged_R2.fastq.gz")
-        }
-    elif strategy in ["individual", "per_sample"]:
-        result = {
-            "merged_contigs": os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
-        }
-    else:
-        print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
-        result = {
-            "merged": os.path.join(dir["output"], "assembly", "all_merged.fastq.gz"),
-            "r1": os.path.join(dir["output"], "assembly", "all_unmerged_R1.fastq.gz"),
-            "r2": os.path.join(dir["output"], "assembly", "all_unmerged_R2.fastq.gz")
-        }
-    
-    # Dictionary will only contain keys that were added
-    return result
-rule megahit_coassembly:
+rule megahit_assembly:
     """Perform coassembly of all samples using MEGAHIT"""
     input:
         merged = os.path.join(dir["output"], "assembly", "all_merged.fastq.gz"),
@@ -188,129 +159,13 @@ rule megahit_coassembly:
             &>> {log}
         """
 
-rule megahit_individual_assembly:
-    """Perform assembly of individual samples using MEGAHIT"""
-    input:
-        merged = os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"),
-        r1 = os.path.join(dir["output"], "bbmerge", "{sample}_R1_unmerged.fastq.gz"),
-        r2 = os.path.join(dir["output"], "bbmerge", "{sample}_R2_unmerged.fastq.gz")
-    output:
-        contigs = os.path.join(dir["output"], "assembly", "per_sample", "{sample}", "final.contigs.fa"),
-        dir = directory(os.path.join(dir["output"], "assembly", "per_sample", "{sample}"))
-    params:
-        min_contig = 1000,
-        out_dir = os.path.join(dir["output"], "assembly", "per_sample", "{sample}")
-    threads: 16
-    conda:
-        os.path.join(dir["env"], "megahit.yaml")
-    log:
-        os.path.join(dir["logs"], "assembly", "per_sample", "{sample}_megahit.log")
-    benchmark:
-        os.path.join(dir["bench"], "assembly", "per_sample", "{sample}_megahit.txt")
-    shell:
-        """
-        # Remove output directory if it exists since megahit won't overwrite
-        rm -rf {params.out_dir}
-        
-        # Run megahit
-        megahit -r {input.merged} -1 {input.r1} -2 {input.r2} \
-            -o {params.out_dir} \
-            --min-contig-len {params.min_contig} \
-            --k-list 21,29,39,59,79,99,119,141 \
-            -t {threads} \
-            &>> {log}
-        """
-
-rule collect_individual_assemblies:
-    """Collect individual assembly contigs for merging with Flye"""
-    input:
-        expand(os.path.join(dir["output"], "assembly", "per_sample", "{sample}", "final.contigs.fa"), sample=SAMPLES)
-    output:
-        directory(os.path.join(dir["output"], "assembly", "per_sample", "contigs"))
-    log:
-        os.path.join(dir["logs"], "assembly", "collect_individual_assemblies.log")
-    shell:
-        """
-        # Create output directory
-        mkdir -p {output} 2> {log}
-        
-        # Copy each assembly with a unique name
-        for file in {input}; do
-            sample=$(echo $file | rev | cut -d/ -f2 | rev)
-            cp $file {output}/$sample.contigs.fa 2>> {log}
-        done
-        """
-
-rule flye_merge_assemblies:
-    """Merge individual assemblies using Flye subassemblies mode"""
-    input:
-        contig_dir = os.path.join(dir["output"], "assembly", "per_sample", "contigs")
-    output:
-        contigs = os.path.join(dir["output"], "assembly", "flye", "assembly.fasta"),
-        dir = directory(os.path.join(dir["output"], "assembly", "flye"))
-    params:
-        out_dir = os.path.join(dir["output"], "assembly", "flye"),
-        min_contig = 1000
-    threads: 24
-    conda:
-        os.path.join(dir["env"], "flye.yaml")
-    log:
-        os.path.join(dir["logs"], "assembly", "flye_merge.log")
-    benchmark:
-        os.path.join(dir["bench"], "assembly", "flye_merge.txt")
-    shell:
-        """
-        # Create a list of all contig files
-        find {input.contig_dir} -name "*.contigs.fa" > contig_files.txt
-        
-        # Run flye in subassemblies mode
-        flye --subassemblies @contig_files.txt \
-            --out-dir {params.out_dir} \
-            --min-overlap 500 \
-            --threads {threads} \
-            &> {log}
-            
-        # Remove temporary file
-        rm contig_files.txt
-        """
-
-
-def get_assembly_path(wildcards):
-    """Return the path to the final assembly file based on the assembly strategy.
-    
-    This function will always return a valid path string, never None.
-    """
-    strategy = config.get("assembly_strategy", "coassembly")
-    if strategy == "coassembly":
-        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
-    elif strategy in ["individual", "per_sample"]:
-        return os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
-    else:
-        # Handle unexpected values, default to coassembly
-        print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
-        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
-
-def get_contigs_mmi_path(wildcards):
-    """Return the path to the minimap2 index file based on the assembly strategy.
-    
-    This function will always return a valid path string, never None.
-    """
-    strategy = config.get("assembly_strategy", "coassembly")
-    if strategy == "coassembly":
-        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
-    elif strategy in ["individual", "per_sample"]:
-        return os.path.join(dir["output"], "assembly", "flye", "assembly.mmi")
-    else:
-        # Handle unexpected values, default to coassembly
-        print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
-        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
 
 rule index_contigs:
     """Index contigs using minimap2 for read mapping"""
     input:
-        get_assembly_path
+        os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
     output:
-        get_contigs_mmi_path
+        os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
     threads: 12
     conda:
         os.path.join(dir["env"], "minimap_env.yaml")
@@ -327,7 +182,7 @@ rule align_host_removed_reads:
     input:
         r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
         r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
-        index = get_contigs_mmi_path
+        index = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
     output:
         bam_index = os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam.bai"),
         sorted_bam = os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam")
@@ -364,7 +219,7 @@ rule merge_bams:
 rule generate_pileup:
     input:
         bam = os.path.join(dir["output"], "host_removed", "merged.bam"),
-        reference = get_assembly_path
+        reference = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
     output:
         pileup = os.path.join(dir["output"], "host_removed", "merged.pileup")
     log:
@@ -380,7 +235,7 @@ rule generate_pileup:
 rule assembly_stats:
     """Calculate assembly statistics"""
     input:
-        get_assembly_path
+        os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
     output:
         stats = os.path.join(dir["stats"], "assembly", "assembly_stats.txt")
     conda:

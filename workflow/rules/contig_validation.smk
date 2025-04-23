@@ -1,39 +1,9 @@
-def get_contigs_path(wildcards):
-    """Return the path to the contigs file based on the assembly strategy.
-    
-    This function will always return a valid path string, never None.
-    """
-    strategy = config.get("assembly_strategy", "coassembly")
-    if strategy == "coassembly":
-        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
-    elif strategy in ["individual", "per_sample"]:
-        return os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
-    else:
-        # Handle unexpected values, default to coassembly
-        print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
-        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
-
-def get_contigs_validation_mmi_path(wildcards):
-    """Return the path to the minimap2 index file for contig validation based on the assembly strategy.
-    
-    This function will always return a valid path string, never None.
-    """
-    strategy = config.get("assembly_strategy", "coassembly")
-    if strategy == "coassembly":
-        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
-    elif strategy in ["individual", "per_sample"]:
-        return os.path.join(dir["output"], "assembly", "flye", "assembly.mmi")
-    else:
-        # Handle unexpected values, default to coassembly
-        print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
-        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
-
 rule map_reads_to_contigs:
     """Map host-removed reads back to contigs to evaluate assembly quality"""
     input:
         r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
         r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
-        idx = lambda wildcards: get_contigs_validation_mmi_path(wildcards)
+        idx = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
     output:
         bam = os.path.join(dir["output"], "contig_validation", "mapping", "{sample}.bam"),
         sorted = os.path.join(dir["output"], "contig_validation", "mapping", "{sample}.sorted.bam"),
@@ -65,7 +35,7 @@ rule generate_per_sample_coverage:
     """Generate per-sample coverage in 1kb windows for each contig"""
     input:
         bam = os.path.join(dir["output"], "contig_validation", "mapping", "{sample}.sorted.bam"),
-        contigs = lambda wildcards: get_contigs_path(wildcards)
+        contigs = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
     output:
         coverage = os.path.join(dir["stats"], "contig_validation", "coverage", "{sample}_window_coverage.bed")
     params:
@@ -130,7 +100,7 @@ rule detect_chimeric_contigs:
     """Detect chimeric contigs by analyzing per-sample coverage patterns along contigs"""
     input:
         coverages = expand(os.path.join(dir["stats"], "contig_validation", "coverage", "{sample}_window_coverage.bed"), sample=SAMPLES),
-        contigs = lambda wildcards: get_contigs_path(wildcards)
+        contigs = os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
     output:
         chimeric = os.path.join(dir["stats"], "contig_validation", "chimeric", "chimeric_contigs.txt"),
         heatmap = os.path.join(dir["stats"], "contig_validation", "chimeric", "chimeric_contigs_heatmap.txt")
