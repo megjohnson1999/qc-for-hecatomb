@@ -127,19 +127,20 @@ rule verify_read_counts:
         """
 
 # Add conditional logic to determine which assembly rules to run
-def assembly_mode_choose_contigs(wildcards):
+# Using a simpler conditional approach for input selection
+def get_assembly_input(wildcards):
     if config.get("assembly_strategy", "coassembly") == "coassembly":
         # For coassembly, we need concatenated files
-        return [
-            os.path.join(dir["output"], "assembly", "all_merged.fastq.gz"),
-            os.path.join(dir["output"], "assembly", "all_unmerged_R1.fastq.gz"),
-            os.path.join(dir["output"], "assembly", "all_unmerged_R2.fastq.gz")
-        ]
+        return {
+            "merged": os.path.join(dir["output"], "assembly", "all_merged.fastq.gz"),
+            "r1": os.path.join(dir["output"], "assembly", "all_unmerged_R1.fastq.gz"),
+            "r2": os.path.join(dir["output"], "assembly", "all_unmerged_R2.fastq.gz")
+        }
     else:
-        # For individual assemblies, we need all per-sample assemblies and the merged Flye assembly
-        return [
-            os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
-        ]
+        # For individual assemblies, we need the merged Flye assembly
+        return {
+            "merged_contigs": os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
+        }
 
 rule megahit_coassembly:
     """Perform coassembly of all samples using MEGAHIT"""
@@ -276,9 +277,9 @@ def get_contigs_mmi_path(wildcards):
 rule index_contigs:
     """Index contigs using minimap2 for read mapping"""
     input:
-        get_assembly_path
+        lambda wildcards: get_assembly_path(wildcards)
     output:
-        get_contigs_mmi_path
+        lambda wildcards: get_contigs_mmi_path(wildcards)
     threads: 12
     conda:
         os.path.join(dir["env"], "minimap_env.yaml")
@@ -295,7 +296,7 @@ rule align_host_removed_reads:
     input:
         r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
         r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
-        index = get_contigs_mmi_path
+        index = lambda wildcards: get_contigs_mmi_path(wildcards)
     output:
         bam_index = os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam.bai"),
         sorted_bam = os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam")
@@ -332,7 +333,7 @@ rule merge_bams:
 rule generate_pileup:
     input:
         bam = os.path.join(dir["output"], "host_removed", "merged.bam"),
-        reference = get_assembly_path
+        reference = lambda wildcards: get_assembly_path(wildcards)
     output:
         pileup = os.path.join(dir["output"], "host_removed", "merged.pileup")
     log:
@@ -348,7 +349,7 @@ rule generate_pileup:
 rule assembly_stats:
     """Calculate assembly statistics"""
     input:
-        get_assembly_path
+        lambda wildcards: get_assembly_path(wildcards)
     output:
         stats = os.path.join(dir["stats"], "assembly", "assembly_stats.txt")
     conda:

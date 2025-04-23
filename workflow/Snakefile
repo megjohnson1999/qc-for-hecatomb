@@ -49,13 +49,13 @@ def get_assembly_inputs(wildcards):
         os.path.join(dir["output"], "host_removed", "merged.pileup")
     ]
     
-    # Add strategy-specific inputs
+    # Add strategy-specific inputs as strings, not functions
     if config.get("assembly_strategy", "coassembly") == "coassembly":
         # For coassembly, we need the MEGAHIT output
         inputs.append(os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa"))
     else:
         # For individual assembly, we need all per-sample assemblies and the merged Flye assembly
-        # Add per-sample assemblies individually to avoid nested lists
+        # Add per-sample assemblies individually 
         for sample in SAMPLES:
             inputs.append(os.path.join(dir["output"], "assembly", "per_sample", sample, "final.contigs.fa"))
         # Add the merged Flye assembly

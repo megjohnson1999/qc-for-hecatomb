@@ -4,7 +4,7 @@ def get_contigs_path(wildcards):
     else:
         return os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
 
-def get_contigs_mmi_path(wildcards):
+def get_contigs_validation_mmi_path(wildcards):
     if config.get("assembly_strategy", "coassembly") == "coassembly":
         return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
     else:
@@ -15,7 +15,7 @@ rule map_reads_to_contigs:
     input:
         r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
         r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
-        idx = get_contigs_mmi_path
+        idx = lambda wildcards: get_contigs_validation_mmi_path(wildcards)
     output:
         bam = os.path.join(dir["output"], "contig_validation", "mapping", "{sample}.bam"),
         sorted = os.path.join(dir["output"], "contig_validation", "mapping", "{sample}.sorted.bam"),
@@ -47,7 +47,7 @@ rule generate_per_sample_coverage:
     """Generate per-sample coverage in 1kb windows for each contig"""
     input:
         bam = os.path.join(dir["output"], "contig_validation", "mapping", "{sample}.sorted.bam"),
-        contigs = get_contigs_path
+        contigs = lambda wildcards: get_contigs_path(wildcards)
     output:
         coverage = os.path.join(dir["stats"], "contig_validation", "coverage", "{sample}_window_coverage.bed")
     params:
@@ -112,7 +112,7 @@ rule detect_chimeric_contigs:
     """Detect chimeric contigs by analyzing per-sample coverage patterns along contigs"""
     input:
         coverages = expand(os.path.join(dir["stats"], "contig_validation", "coverage", "{sample}_window_coverage.bed"), sample=SAMPLES),
-        contigs = get_contigs_path
+        contigs = lambda wildcards: get_contigs_path(wildcards)
     output:
         chimeric = os.path.join(dir["stats"], "contig_validation", "chimeric", "chimeric_contigs.txt"),
         heatmap = os.path.join(dir["stats"], "contig_validation", "chimeric", "chimeric_contigs_heatmap.txt")
