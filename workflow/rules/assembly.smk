@@ -128,12 +128,7 @@ rule verify_read_counts:
 
 def get_assembly_input(wildcards):
     strategy = config.get("assembly_strategy", "coassembly")
-    result = {
-        "merged": None,
-        "r1": None,
-        "r2": None,
-        "merged_contigs": None
-    }
+    result = {}
     
     if strategy == "coassembly":
         result.update({
@@ -153,8 +148,8 @@ def get_assembly_input(wildcards):
             "r2": os.path.join(dir["output"], "assembly", "all_unmerged_R2.fastq.gz")
         })
     
-    # Ensure no None values are returned
-    return {k: v for k, v in result.items() if v is not None}
+    # Dictionary will only contain keys that were added
+    return result
 rule megahit_coassembly:
     """Perform coassembly of all samples using MEGAHIT"""
     input:

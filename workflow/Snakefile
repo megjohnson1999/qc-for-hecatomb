@@ -100,6 +100,6 @@ rule all:
         os.path.join(dir["stats"], "assembly", "assembly_stats.txt"),
         os.path.join(dir["stats"], "contig_validation", "contig_validation_summary.txt"),
         os.path.join(dir["output"], "host_removed", "merged.pileup"),
-        # Use the function to get strategy-specific outputs
-        get_strategy_outputs()
+        # Add assembly files based on strategy
+        [os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")] if config.get("assembly_strategy", "coassembly") == "coassembly" else [os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")] + [os.path.join(dir["output"], "assembly", "per_sample", sample, "final.contigs.fa") for sample in SAMPLES],
     default_target: True
