@@ -261,6 +261,12 @@ rule flye_merge_assemblies:
         """
 
 
+def get_assembly_path(wildcards):
+    if config.get("assembly_strategy", "coassembly") == "coassembly":
+        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
+    else:
+        return os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
+
 def get_contigs_mmi_path(wildcards):
     if config.get("assembly_strategy", "coassembly") == "coassembly":
         return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
@@ -338,12 +344,6 @@ rule generate_pileup:
         samtools mpileup {params.extra} -f {input.reference} {input.bam} > {output.pileup} 2> {log}
         """
 
-
-def get_assembly_path(wildcards):
-    if config.get("assembly_strategy", "coassembly") == "coassembly":
-        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
-    else:
-        return os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
 
 rule assembly_stats:
     """Calculate assembly statistics"""
