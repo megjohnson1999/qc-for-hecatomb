@@ -1,14 +1,24 @@
 def get_contigs_path(wildcards):
-    if config.get("assembly_strategy", "coassembly") == "coassembly":
+    strategy = config.get("assembly_strategy", "coassembly")
+    if strategy == "coassembly":
         return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
-    else:
+    elif strategy in ["individual", "per_sample"]:
         return os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
+    else:
+        # Handle unexpected values, default to coassembly
+        print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
+        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
 
 def get_contigs_validation_mmi_path(wildcards):
-    if config.get("assembly_strategy", "coassembly") == "coassembly":
+    strategy = config.get("assembly_strategy", "coassembly")
+    if strategy == "coassembly":
         return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
-    else:
+    elif strategy in ["individual", "per_sample"]:
         return os.path.join(dir["output"], "assembly", "flye", "assembly.mmi")
+    else:
+        # Handle unexpected values, default to coassembly
+        print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
+        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
 
 rule map_reads_to_contigs:
     """Map host-removed reads back to contigs to evaluate assembly quality"""

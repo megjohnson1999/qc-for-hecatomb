@@ -129,17 +129,26 @@ rule verify_read_counts:
 # Add conditional logic to determine which assembly rules to run
 # Using a simpler conditional approach for input selection
 def get_assembly_input(wildcards):
-    if config.get("assembly_strategy", "coassembly") == "coassembly":
+    strategy = config.get("assembly_strategy", "coassembly")
+    if strategy == "coassembly":
         # For coassembly, we need concatenated files
         return {
             "merged": os.path.join(dir["output"], "assembly", "all_merged.fastq.gz"),
             "r1": os.path.join(dir["output"], "assembly", "all_unmerged_R1.fastq.gz"),
             "r2": os.path.join(dir["output"], "assembly", "all_unmerged_R2.fastq.gz")
         }
-    else:
+    elif strategy in ["individual", "per_sample"]:
         # For individual assemblies, we need the merged Flye assembly
         return {
             "merged_contigs": os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
+        }
+    else:
+        # Handle unexpected values, default to coassembly
+        print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
+        return {
+            "merged": os.path.join(dir["output"], "assembly", "all_merged.fastq.gz"),
+            "r1": os.path.join(dir["output"], "assembly", "all_unmerged_R1.fastq.gz"),
+            "r2": os.path.join(dir["output"], "assembly", "all_unmerged_R2.fastq.gz")
         }
 
 rule megahit_coassembly:
@@ -263,16 +272,26 @@ rule flye_merge_assemblies:
 
 
 def get_assembly_path(wildcards):
-    if config.get("assembly_strategy", "coassembly") == "coassembly":
+    strategy = config.get("assembly_strategy", "coassembly")
+    if strategy == "coassembly":
         return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
-    else:
+    elif strategy in ["individual", "per_sample"]:
         return os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
+    else:
+        # Handle unexpected values, default to coassembly
+        print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
+        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
 
 def get_contigs_mmi_path(wildcards):
-    if config.get("assembly_strategy", "coassembly") == "coassembly":
+    strategy = config.get("assembly_strategy", "coassembly")
+    if strategy == "coassembly":
         return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
-    else:
+    elif strategy in ["individual", "per_sample"]:
         return os.path.join(dir["output"], "assembly", "flye", "assembly.mmi")
+    else:
+        # Handle unexpected values, default to coassembly
+        print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
+        return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
 
 rule index_contigs:
     """Index contigs using minimap2 for read mapping"""
