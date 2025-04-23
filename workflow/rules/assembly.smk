@@ -126,31 +126,35 @@ rule verify_read_counts:
         fi
         """
 
-# Add conditional logic to determine which assembly rules to run
-# Using a simpler conditional approach for input selection
 def get_assembly_input(wildcards):
     strategy = config.get("assembly_strategy", "coassembly")
+    result = {
+        "merged": None,
+        "r1": None,
+        "r2": None,
+        "merged_contigs": None
+    }
+    
     if strategy == "coassembly":
-        # For coassembly, we need concatenated files
-        return {
+        result.update({
             "merged": os.path.join(dir["output"], "assembly", "all_merged.fastq.gz"),
             "r1": os.path.join(dir["output"], "assembly", "all_unmerged_R1.fastq.gz"),
             "r2": os.path.join(dir["output"], "assembly", "all_unmerged_R2.fastq.gz")
-        }
+        })
     elif strategy in ["individual", "per_sample"]:
-        # For individual assemblies, we need the merged Flye assembly
-        return {
+        result.update({
             "merged_contigs": os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
-        }
+        })
     else:
-        # Handle unexpected values, default to coassembly
         print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
-        return {
+        result.update({
             "merged": os.path.join(dir["output"], "assembly", "all_merged.fastq.gz"),
             "r1": os.path.join(dir["output"], "assembly", "all_unmerged_R1.fastq.gz"),
             "r2": os.path.join(dir["output"], "assembly", "all_unmerged_R2.fastq.gz")
-        }
-
+        })
+    
+    # Ensure no None values are returned
+    return {k: v for k, v in result.items() if v is not None}
 rule megahit_coassembly:
     """Perform coassembly of all samples using MEGAHIT"""
     input:
