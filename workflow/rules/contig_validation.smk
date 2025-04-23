@@ -1,4 +1,8 @@
 def get_contigs_path(wildcards):
+    """Return the path to the contigs file based on the assembly strategy.
+    
+    This function will always return a valid path string, never None.
+    """
     strategy = config.get("assembly_strategy", "coassembly")
     if strategy == "coassembly":
         return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
@@ -10,6 +14,10 @@ def get_contigs_path(wildcards):
         return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
 
 def get_contigs_validation_mmi_path(wildcards):
+    """Return the path to the minimap2 index file for contig validation based on the assembly strategy.
+    
+    This function will always return a valid path string, never None.
+    """
     strategy = config.get("assembly_strategy", "coassembly")
     if strategy == "coassembly":
         return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")

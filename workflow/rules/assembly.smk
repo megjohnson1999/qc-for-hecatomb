@@ -127,26 +127,31 @@ rule verify_read_counts:
         """
 
 def get_assembly_input(wildcards):
+    """Return assembly input files based on the assembly strategy.
+    
+    This function should only be used in a rule that knows which keys to expect
+    for the current assembly strategy.
+    """
     strategy = config.get("assembly_strategy", "coassembly")
     result = {}
     
     if strategy == "coassembly":
-        result.update({
+        result = {
             "merged": os.path.join(dir["output"], "assembly", "all_merged.fastq.gz"),
             "r1": os.path.join(dir["output"], "assembly", "all_unmerged_R1.fastq.gz"),
             "r2": os.path.join(dir["output"], "assembly", "all_unmerged_R2.fastq.gz")
-        })
+        }
     elif strategy in ["individual", "per_sample"]:
-        result.update({
+        result = {
             "merged_contigs": os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
-        })
+        }
     else:
         print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
-        result.update({
+        result = {
             "merged": os.path.join(dir["output"], "assembly", "all_merged.fastq.gz"),
             "r1": os.path.join(dir["output"], "assembly", "all_unmerged_R1.fastq.gz"),
             "r2": os.path.join(dir["output"], "assembly", "all_unmerged_R2.fastq.gz")
-        })
+        }
     
     # Dictionary will only contain keys that were added
     return result
@@ -271,6 +276,10 @@ rule flye_merge_assemblies:
 
 
 def get_assembly_path(wildcards):
+    """Return the path to the final assembly file based on the assembly strategy.
+    
+    This function will always return a valid path string, never None.
+    """
     strategy = config.get("assembly_strategy", "coassembly")
     if strategy == "coassembly":
         return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
@@ -282,6 +291,10 @@ def get_assembly_path(wildcards):
         return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")
 
 def get_contigs_mmi_path(wildcards):
+    """Return the path to the minimap2 index file based on the assembly strategy.
+    
+    This function will always return a valid path string, never None.
+    """
     strategy = config.get("assembly_strategy", "coassembly")
     if strategy == "coassembly":
         return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")

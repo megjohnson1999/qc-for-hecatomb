@@ -37,6 +37,11 @@ include: "rules/contig_validation.smk"
 #include: "rules/host_removal.smk"
 
 def get_assembly_inputs(wildcards):
+    """Get all expected assembly inputs based on the current assembly strategy.
+    
+    This function returns a list of file paths that should be produced by the workflow,
+    depending on whether we're using coassembly or individual assembly strategy.
+    """
     inputs = [
         os.path.join(dir["stats"], "raw_input_data", "basic_stats.txt"),
         os.path.join(dir["stats"], "qc", "fastp_stats.tsv"),
@@ -50,16 +55,20 @@ def get_assembly_inputs(wildcards):
     ]
     
     # Add strategy-specific inputs as strings, not functions
-    if config.get("assembly_strategy", "coassembly") == "coassembly":
+    strategy = config.get("assembly_strategy", "coassembly")
+    if strategy == "coassembly":
         # For coassembly, we need the MEGAHIT output
         inputs.append(os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa"))
-    else:
+    elif strategy in ["individual", "per_sample"]:
         # For individual assembly, we need all per-sample assemblies and the merged Flye assembly
         # Add per-sample assemblies individually 
         for sample in SAMPLES:
             inputs.append(os.path.join(dir["output"], "assembly", "per_sample", sample, "final.contigs.fa"))
         # Add the merged Flye assembly
         inputs.append(os.path.join(dir["output"], "assembly", "flye", "assembly.fasta"))
+    else:
+        print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
+        inputs.append(os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa"))
         
     return inputs
 
@@ -76,15 +85,26 @@ def get_assembly_inputs(wildcards):
 
 # Replace with a function that returns the appropriate files
 def get_strategy_outputs():
+    """Get all assembly output files based on the assembly strategy.
+    
+    Returns a list of expected output files that will always have at least one file.
+    """
     outputs = []
-    if config.get("assembly_strategy", "coassembly") == "coassembly":
+    strategy = config.get("assembly_strategy", "coassembly")
+    
+    if strategy == "coassembly":
         # For coassembly
         outputs.append(os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa"))
-    else:
+    elif strategy in ["individual", "per_sample"]:
         # For individual assembly
         for sample in SAMPLES:
             outputs.append(os.path.join(dir["output"], "assembly", "per_sample", sample, "final.contigs.fa"))
         outputs.append(os.path.join(dir["output"], "assembly", "flye", "assembly.fasta"))
+    else:
+        # Default behavior for unexpected values
+        print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
+        outputs.append(os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa"))
+    
     return outputs
 
 # Then modify your rule all
