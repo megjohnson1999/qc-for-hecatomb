@@ -65,5 +65,29 @@ def get_assembly_inputs(wildcards):
 
 rule all:
     input:
-        lambda wildcards: get_assembly_inputs(wildcards)
+        # Common inputs for all strategies
+        os.path.join(dir["stats"], "raw_input_data", "basic_stats.txt"),
+        os.path.join(dir["stats"], "qc", "fastp_stats.tsv"),
+        os.path.join(dir["stats"], "qc", "primer_b_stats.tsv"),
+        os.path.join(dir["stats"], "qc", "vector_stats.tsv"),
+        os.path.join(dir["stats"], "qc", "host_removal_stats.tsv"),
+        os.path.join(dir["stats"], "qc", "preprocessing_plots.html"),
+        os.path.join(dir["stats"], "assembly", "assembly_stats.txt"),
+        os.path.join(dir["stats"], "contig_validation", "contig_validation_summary.txt"),
+        os.path.join(dir["output"], "host_removed", "merged.pileup"),
+        
+        # Strategy-specific inputs wrapped individually in lambda functions
+        lambda wildcards: os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa") 
+            if config.get("assembly_strategy", "coassembly") == "coassembly" 
+            else [],
+        
+        # Per-sample assemblies for individual strategy
+        lambda wildcards: expand(os.path.join(dir["output"], "assembly", "per_sample", "{sample}", "final.contigs.fa"), sample=SAMPLES)
+            if config.get("assembly_strategy", "individual") == "individual"
+            else [],
+            
+        # Flye merged assembly for individual strategy
+        lambda wildcards: os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
+            if config.get("assembly_strategy", "individual") == "individual"
+            else []
     default_target: True
