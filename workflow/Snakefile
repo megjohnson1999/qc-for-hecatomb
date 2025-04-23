@@ -55,10 +55,11 @@ def get_assembly_inputs(wildcards):
         inputs.append(os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa"))
     else:
         # For individual assembly, we need all per-sample assemblies and the merged Flye assembly
-        inputs.extend([
-            expand(os.path.join(dir["output"], "assembly", "per_sample", "{sample}", "final.contigs.fa"), sample=SAMPLES),
-            os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")
-        ])
+        # Add per-sample assemblies individually to avoid nested lists
+        for sample in SAMPLES:
+            inputs.append(os.path.join(dir["output"], "assembly", "per_sample", sample, "final.contigs.fa"))
+        # Add the merged Flye assembly
+        inputs.append(os.path.join(dir["output"], "assembly", "flye", "assembly.fasta"))
         
     return inputs
 
