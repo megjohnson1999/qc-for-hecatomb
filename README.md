@@ -31,7 +31,10 @@ If your fastq files have any suffixes other than _R1.fastq.gz and _R2.fastq.gz, 
 
 # Options:
 
- - reads: specify path to directory where paired-end fastq reads are
+ - reads: specify paths to directories where paired-end fastq reads are. Can be:
+   - A single directory: e.g., `reads=/scratch/sahlab/Megan/test_reads`
+   - Multiple directories: e.g., `reads='["/dir1", "/dir2", "/dir3"]'`
+   - Note: For samples with the same name in different directories, the first encountered will be used
 
  - output: specify path to directory where all outputs will be created
 
@@ -47,9 +50,12 @@ If your fastq files have any suffixes other than _R1.fastq.gz and _R2.fastq.gz, 
 ### Example commands:
 
 ```
-# Default coassembly
+# Default coassembly with a single read directory
 snakemake --profile ../profile/slurm/ --config reads=/scratch/sahlab/Megan/test_reads output=/scratch/sahlab/Megan/pipeline_test.out
 
 # Individual assembly with Flye merging
 snakemake --profile ../profile/slurm/ --config reads=/scratch/sahlab/Megan/test_reads output=/scratch/sahlab/Megan/pipeline_test.out assembly_strategy=individual
+
+# Using multiple read directories
+snakemake --profile ../profile/slurm/ --config reads='["/scratch/sahlab/Megan/test_reads1", "/scratch/sahlab/Megan/test_reads2"]' output=/scratch/sahlab/Megan/pipeline_test.out
 ```

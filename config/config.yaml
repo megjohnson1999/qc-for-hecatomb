@@ -1,4 +1,4 @@
-reads:
+reads: []  # Can be a single directory or a list of directories
 output: "hecatomb-qc.out"
 log:
 fastq_names_1: "{sample}_R1.fastq.gz"

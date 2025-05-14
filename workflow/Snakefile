@@ -5,9 +5,57 @@ import os
 from glob import glob
 import yaml
 import json
+import pathlib
+from itertools import chain
 
 configfile: "../config/config.yaml"
-SAMPLES, = glob_wildcards(os.path.join(config["reads"],config["fastq_names_1"]))
+
+# Handle both single directory and multiple directories
+read_dirs = config["reads"]
+if not read_dirs:
+    raise ValueError("No read directories specified. Please provide at least one directory in the 'reads' configuration.")
+if not isinstance(read_dirs, list):
+    read_dirs = [read_dirs]  # Convert single string to list
+
+# Get samples from all read directories
+SAMPLES = set()
+SAMPLE_TO_DIR = {}  # Map sample names to their directories
+
+for read_dir in read_dirs:
+    pattern = os.path.join(read_dir, config["fastq_names_1"])
+    dir_samples, = glob_wildcards(pattern)
+    
+    # Add all samples found in this directory
+    for sample in dir_samples:
+        SAMPLES.add(sample)
+        SAMPLE_TO_DIR[sample] = read_dir
+
+SAMPLES = sorted(list(SAMPLES))  # Convert to sorted list for consistency
+
+if not SAMPLES:
+    raise ValueError("No samples found in the specified read directories. Check your directory paths and fastq naming patterns.")
+    
+# Helper functions to get read file paths
+def get_read1_path(wildcards):
+    """Get the path to the R1 file for a given sample"""
+    if wildcards.sample not in SAMPLE_TO_DIR:
+        raise ValueError(f"Sample {wildcards.sample} not found in sample-to-directory mapping")
+    return os.path.join(SAMPLE_TO_DIR[wildcards.sample], config["fastq_names_1"].format(sample=wildcards.sample))
+
+def get_read2_path(wildcards):
+    """Get the path to the R2 file for a given sample"""
+    if wildcards.sample not in SAMPLE_TO_DIR:
+        raise ValueError(f"Sample {wildcards.sample} not found in sample-to-directory mapping")
+    return os.path.join(SAMPLE_TO_DIR[wildcards.sample], config["fastq_names_2"].format(sample=wildcards.sample))
+
+def get_all_read_files():
+    """Get all read files across all directories"""
+    r1_files = []
+    r2_files = []
+    for sample in SAMPLES:
+        r1_files.append(get_read1_path(type('Wildcards', (object,), {'sample': sample})()))
+        r2_files.append(get_read2_path(type('Wildcards', (object,), {'sample': sample})()))
+    return {'r1_files': r1_files, 'r2_files': r2_files}
 
 dir = dict()
 

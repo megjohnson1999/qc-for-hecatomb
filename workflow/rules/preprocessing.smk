@@ -1,8 +1,8 @@
 rule fastp:
     """Run fastp to remove adapter sequences"""
     input:
-        r1 = os.path.join(config["reads"], config["fastq_names_1"]),
-        r2 = os.path.join(config["reads"], config["fastq_names_2"]),
+        r1 = get_read1_path,
+        r2 = get_read2_path,
     output:
         r1 = temp(os.path.join(dir["output"], "qc", "fastp", "{sample}_R1_trimmed.fastq.gz")),
         r2 = temp(os.path.join(dir["output"], "qc", "fastp", "{sample}_R2_trimmed.fastq.gz")),

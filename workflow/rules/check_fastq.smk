@@ -1,8 +1,8 @@
 rule fq_lint:
     """Check that fastq files have valid format"""
     input:
-        r1 = os.path.join(config["reads"], config["fastq_names_1"]),
-        r2 = os.path.join(config["reads"], config["fastq_names_2"]),
+        r1 = get_read1_path,
+        r2 = get_read2_path,
     output:
         lint=os.path.join(dir["logs"],"lint","{sample}.lint")
     conda:
@@ -15,8 +15,8 @@ rule fq_lint:
 rule summary_stats:
     """Get some basic stats about the input data"""
     input:
-        r1_all = expand(os.path.join(config["reads"], config["fastq_names_1"]), sample=SAMPLES),
-        r2_all = expand(os.path.join(config["reads"], config["fastq_names_2"]), sample=SAMPLES),
+        r1_all = lambda wildcards: get_all_read_files()['r1_files'],
+        r2_all = lambda wildcards: get_all_read_files()['r2_files'],
         lint = expand(os.path.join(dir["logs"],"lint","{sample}.lint"), sample=SAMPLES)
     output:
         os.path.join(dir["stats"], "raw_input_data", "basic_stats.txt")
@@ -30,11 +30,11 @@ rule summary_stats:
 rule fastqc:
     """Perform fastqc on the input data"""
     input:
-        r1 = os.path.join(config["reads"], config["fastq_names_1"]),
-        r2 = os.path.join(config["reads"], config["fastq_names_2"]),
+        r1 = get_read1_path,
+        r2 = get_read2_path,
     output:
-        fastqc_r1 = os.path.join(dir["results"], "output", "fastqc", f"{config['fastq_names_1']}_fastqc.html"),
-        fastqc_r2 = os.path.join(dir["results"], "output", "fastqc", f"{config['fastq_names_2']}_fastqc.html"),
+        fastqc_r1 = os.path.join(dir["results"], "output", "fastqc", "{sample}_R1_fastqc.html"),
+        fastqc_r2 = os.path.join(dir["results"], "output", "fastqc", "{sample}_R2_fastqc.html"),
     params:
         outdir=os.path.join(dir["results"], "output", "fastqc")
     conda:
@@ -47,8 +47,8 @@ rule fastqc:
 rule multiqc:
     """Get a report that consolidates the results for all samples"""
     input:
-        expand(os.path.join(dir["results"], "output", "fastqc", f"{config['fastq_names_1']}_fastqc.html"), sample=SAMPLES),
-        expand(os.path.join(dir["results"], "output", "fastqc", f"{config['fastq_names_2']}_fastqc.html"), sample=SAMPLES),
+        expand(os.path.join(dir["results"], "output", "fastqc", "{sample}_R1_fastqc.html"), sample=SAMPLES),
+        expand(os.path.join(dir["results"], "output", "fastqc", "{sample}_R2_fastqc.html"), sample=SAMPLES),
     output:
         os.path.join(dir["stats"], "raw_input_data", "multiqc_report.html")
     params:
