@@ -305,12 +305,32 @@ def get_contigs_mmi_path(wildcards):
         print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
         return os.path.join(dir["output"], "assembly", "megahit", "final.contigs.mmi")
 
+# Temporarily commenting out this rule to test multiple read directory functionality
+#rule index_contigs:
+#    """Index contigs using minimap2 for read mapping"""
+#    input:
+#        get_assembly_path
+#    output:
+#        get_contigs_mmi_path
+#    threads: 12
+#    conda:
+#        os.path.join(dir["env"], "minimap_env.yaml")
+#    log:
+#        os.path.join(dir["logs"], "contig_validation", "index_contigs.log")
+#    benchmark:
+#        os.path.join(dir["bench"], "contig_validation", "index_contigs.txt")
+#    shell:
+#        """
+#        minimap2 -d {output} {input} 2> {log}
+#        """
+
+# Temporary placeholder rule with fixed output paths
 rule index_contigs:
-    """Index contigs using minimap2 for read mapping"""
+    """Index contigs using minimap2 for read mapping (temporary version)"""
     input:
-        get_assembly_path
+        contigs = get_assembly_path
     output:
-        get_contigs_mmi_path
+        index = os.path.join(dir["output"], "assembly", "contigs.mmi")
     threads: 12
     conda:
         os.path.join(dir["env"], "minimap_env.yaml")
@@ -320,14 +340,14 @@ rule index_contigs:
         os.path.join(dir["bench"], "contig_validation", "index_contigs.txt")
     shell:
         """
-        minimap2 -d {output} {input} 2> {log}
+        minimap2 -d {output.index} {input.contigs} 2> {log}
         """
 
 rule align_host_removed_reads:
     input:
         r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
         r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
-        index = get_contigs_mmi_path
+        index = os.path.join(dir["output"], "assembly", "contigs.mmi")  # Fixed path to match new index_contigs rule
     output:
         bam_index = os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam.bai"),
         sorted_bam = os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam")
