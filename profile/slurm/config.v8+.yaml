@@ -11,6 +11,7 @@ default-resources:
 jobs: 40
 latency-wait: 60 
 use-conda: True
+conda-prefix: "/ref/sahlab/software/miniforge3/envs/smk_envs_hecatomb_qc"
 keep-going: True
 rerun-incomplete: True
 printshellcmds: True
