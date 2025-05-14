@@ -219,15 +219,26 @@ rule host_removal:
         os.path.join(dir["bench"], "host_removal", "{sample}_hr.txt")
     shell:
         """
+        # Create output directories if they don't exist
+        mkdir -p $(dirname {output.bam})
+        mkdir -p $(dirname {output.stats})
+        mkdir -p $(dirname {log})
+        
         # Check input file integrity thoroughly
         echo "Verifying input file integrity..." >> {log}
         gzip -t {input.r1} || {{ echo "Error: Input R1 file corrupted" >> {log}; exit 1; }}
         gzip -t {input.r2} || {{ echo "Error: Input R2 file corrupted" >> {log}; exit 1; }}
         echo "Input files verified successfully" >> {log}
         
-        # Align paired reads to host genome
+        # Align paired reads to host genome - pipe to samtools to ensure proper BAM creation
         echo "Aligning reads to host genome..." >> {log}
-        minimap2 -ax sr -t {threads} {input.index} {input.r1} {input.r2} 2>> {log} > {output.bam}
+        minimap2 -ax sr -t {threads} {input.index} {input.r1} {input.r2} 2>> {log} | samtools view -bh > {output.bam}
+        
+        # Check if output BAM file is valid
+        if ! samtools quickcheck {output.bam}; then
+            echo "Error: Alignment produced invalid BAM file" >> {log}
+            exit 1
+        fi
         
         # Print initial alignment stats
         echo "Initial alignment statistics:" > {output.stats}
@@ -250,50 +261,33 @@ rule host_removal:
         echo "Extracting unmapped reads to temporary files..." >> {log}
         samtools fastq -N -1 {output.temp_r1} -2 {output.temp_r2} -0 /dev/null -s /dev/null -n {output.sorted} 2>> {log}
         
-        # Check if the extraction succeeded
+        # Handle the case of empty or missing temporary files by creating empty fastq files
+        # This can happen if all reads mapped to host (no reads to extract)
         if [ ! -s "{output.temp_r1}" ] || [ ! -s "{output.temp_r2}" ]; then
-            echo "Error: Failed to extract reads from BAM file (empty files)" >> {log}
-            exit 1
+            echo "Warning: No unmapped reads found (all reads mapped to host)" >> {log}
+            touch {output.temp_r1}
+            touch {output.temp_r2}
         fi
         
-        # Count reads in temporary files to ensure they have paired content
-        r1_lines=$(wc -l < "{output.temp_r1}")
-        r2_lines=$(wc -l < "{output.temp_r2}")
-        r1_reads=$((r1_lines / 4))
-        r2_reads=$((r2_lines / 4))
-        
-        echo "Extracted $r1_reads reads for R1 and $r2_reads reads for R2" >> {log}
-        
-        # Verify read counts match
-        if [ "$r1_reads" -ne "$r2_reads" ]; then
-            echo "Error: Unequal read counts in extracted files (R1: $r1_reads, R2: $r2_reads)" >> {log}
-            exit 1
-        elif [ "$r1_reads" -eq 0 ]; then
-            echo "Warning: No reads extracted from BAM file (possibly no unmapped reads)" >> {log}
-        fi
-        
-        # Copy temporary files to final output locations using cat for safety
+        # Copy temporary files to final output locations
         echo "Copying to final output files..." >> {log}
         cat {output.temp_r1} > {output.r1_hr}
         cat {output.temp_r2} > {output.r2_hr}
         
-        # Verify that output files exist and have content
-        echo -e "\\nVerifying output files:" >> {output.stats}
-        [ -s {output.r1_hr} ] || {{ echo "Error: Output R1 file missing or empty" >> {log}; exit 1; }}
-        [ -s {output.r2_hr} ] || {{ echo "Error: Output R2 file missing or empty" >> {log}; exit 1; }}
-        
-        # Double-check read counts in final files
-        r1_count=$(wc -l < {output.r1_hr} | awk '{{print $1/4}}')
-        r2_count=$(wc -l < {output.r2_hr} | awk '{{print $1/4}}')
+        # Count reads in the output files
+        r1_count=$(wc -l < {output.r1_hr} 2>/dev/null | awk '{{print int($1/4)}}' || echo 0)
+        r2_count=$(wc -l < {output.r2_hr} 2>/dev/null | awk '{{print int($1/4)}}' || echo 0)
         
         echo -e "\\nRead counts in output files:" >> {output.stats}
         echo "R1 reads: $r1_count" >> {output.stats}
         echo "R2 reads: $r2_count" >> {output.stats}
         
-        # Ensure read counts match
+        # Ensure read counts match, but don't fail if both are zero
         if [ "$r1_count" -ne "$r2_count" ]; then
             echo "ERROR: Unequal read counts in host-removed files!" >> {log}
             exit 1
+        elif [ "$r1_count" -eq 0 ] && [ "$r2_count" -eq 0 ]; then
+            echo "Warning: No reads remained after host removal for sample {wildcards.sample}" >> {log}
         fi
         
         echo "Host removal completed successfully for sample {wildcards.sample}" >> {log}
