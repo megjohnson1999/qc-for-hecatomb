@@ -261,11 +261,11 @@ rule flye_merge_assemblies:
         os.path.join(dir["bench"], "assembly", "flye_merge.txt")
     shell:
         """
-        # Create a list of all contig files
-        find {input.contig_dir} -name "*.contigs.fa" > contig_files.txt
+        # Create a comma-separated list of all contig files
+        CONTIG_FILES=$(find {input.contig_dir} -name "*.contigs.fa" | tr '\n' ',' | sed 's/,$//')
         
         # Run flye in subassemblies mode with plasmids flag
-        flye --subassemblies @contig_files.txt \
+        flye --subassemblies $CONTIG_FILES \
             --out-dir {params.out_dir} \
             --plasmids \
             -g 1g \
@@ -276,9 +276,6 @@ rule flye_merge_assemblies:
         statswrapper.sh in={output.contigs} out={output.stats} \
             format=2 \
             ow=t 2> {log.log2}
-            
-        # Remove temporary file
-        rm contig_files.txt
         """
 
 
