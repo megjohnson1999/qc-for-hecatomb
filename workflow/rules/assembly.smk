@@ -251,7 +251,8 @@ rule flye_merge_assemblies:
         stats = os.path.join(dir["output"], "assembly", "flye", "assembly_stats.txt")
     params:
         out_dir = os.path.join(dir["output"], "assembly", "flye"),
-        contig_list = "contig_files.txt"
+        renamed_dir = os.path.join(dir["output"], "assembly", "renamed_contigs"),
+        contig_list = "renamed_contig_files.txt"
     threads: 24
     conda:
         os.path.join(dir["env"], "flye.yaml")
@@ -262,10 +263,25 @@ rule flye_merge_assemblies:
         os.path.join(dir["bench"], "assembly", "flye_merge.txt")
     shell:
         """
-        # Create a list of all contig files (one per line)
-        find {input.contig_dir} -name "*.contigs.fa" > {params.contig_list}
+        # Create directory for renamed contigs
+        mkdir -p {params.renamed_dir}
         
-        # Run flye in subassemblies mode using the file list
+        # Find and rename contigs to ensure unique IDs
+        for contig_file in $(find {input.contig_dir} -name "*.contigs.fa"); do
+            # Get base filename without path
+            base_name=$(basename "$contig_file" .contigs.fa)
+            
+            # Create new file with renamed contigs
+            renamed_file="{params.renamed_dir}/${{base_name}}_renamed.fa"
+            
+            # Use awk to rename contigs with a prefix based on the filename
+            awk '/^>/ {{print ">" FILENAME "_" substr($0, 2)}} !/^>/ {{print}}' FILENAME="${{base_name}}" "$contig_file" > "$renamed_file"
+            
+            # Add to the contig list
+            echo "$renamed_file" >> {params.contig_list}
+        done
+        
+        # Run flye in subassemblies mode using the renamed contigs
         flye --subassemblies $(cat {params.contig_list}) \
             --out-dir {params.out_dir} \
             --plasmids \
@@ -279,7 +295,7 @@ rule flye_merge_assemblies:
             ow=t 2> {log.log2}
             
         # Clean up
-        rm {params.contig_list}
+        rm -rf {params.renamed_dir} {params.contig_list}
         """
 
 
