@@ -250,7 +250,8 @@ rule flye_merge_assemblies:
         dir = directory(os.path.join(dir["output"], "assembly", "flye")),
         stats = os.path.join(dir["output"], "assembly", "flye", "assembly_stats.txt")
     params:
-        out_dir = os.path.join(dir["output"], "assembly", "flye")
+        out_dir = os.path.join(dir["output"], "assembly", "flye"),
+        contig_list = "contig_files.txt"
     threads: 24
     conda:
         os.path.join(dir["env"], "flye.yaml")
@@ -261,11 +262,11 @@ rule flye_merge_assemblies:
         os.path.join(dir["bench"], "assembly", "flye_merge.txt")
     shell:
         """
-        # Create a comma-separated list of all contig files
-        CONTIG_FILES=$(find {input.contig_dir} -name "*.contigs.fa" | tr '\n' ',' | sed 's/,$//')
+        # Create a list of all contig files (one per line)
+        find {input.contig_dir} -name "*.contigs.fa" > {params.contig_list}
         
-        # Run flye in subassemblies mode with plasmids flag
-        flye --subassemblies $CONTIG_FILES \
+        # Run flye in subassemblies mode using the file list
+        flye --subassemblies $(cat {params.contig_list}) \
             --out-dir {params.out_dir} \
             --plasmids \
             -g 1g \
@@ -276,6 +277,9 @@ rule flye_merge_assemblies:
         statswrapper.sh in={output.contigs} out={output.stats} \
             format=2 \
             ow=t 2> {log.log2}
+            
+        # Clean up
+        rm {params.contig_list}
         """
 
 
