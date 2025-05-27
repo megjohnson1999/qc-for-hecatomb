@@ -247,15 +247,16 @@ rule flye_merge_assemblies:
         contig_dir = os.path.join(dir["output"], "assembly", "per_sample", "contigs")
     output:
         contigs = os.path.join(dir["output"], "assembly", "flye", "assembly.fasta"),
-        dir = directory(os.path.join(dir["output"], "assembly", "flye"))
+        dir = directory(os.path.join(dir["output"], "assembly", "flye")),
+        stats = os.path.join(dir["output"], "assembly", "flye", "assembly_stats.txt")
     params:
-        out_dir = os.path.join(dir["output"], "assembly", "flye"),
-        min_contig = 1000
+        out_dir = os.path.join(dir["output"], "assembly", "flye")
     threads: 24
     conda:
         os.path.join(dir["env"], "flye.yaml")
     log:
-        os.path.join(dir["logs"], "assembly", "flye_merge.log")
+        log1 = os.path.join(dir["logs"], "assembly", "flye_merge.log"),
+        log2 = os.path.join(dir["logs"], "assembly", "stats.log")
     benchmark:
         os.path.join(dir["bench"], "assembly", "flye_merge.txt")
     shell:
@@ -263,12 +264,18 @@ rule flye_merge_assemblies:
         # Create a list of all contig files
         find {input.contig_dir} -name "*.contigs.fa" > contig_files.txt
         
-        # Run flye in subassemblies mode
+        # Run flye in subassemblies mode with plasmids flag
         flye --subassemblies @contig_files.txt \
             --out-dir {params.out_dir} \
-            --min-overlap 500 \
+            --plasmids \
+            -g 1g \
             --threads {threads} \
-            &> {log}
+            &> {log.log1}
+            
+        # Generate assembly statistics
+        statswrapper.sh in={output.contigs} out={output.stats} \
+            format=2 \
+            ow=t 2> {log.log2}
             
         # Remove temporary file
         rm contig_files.txt
