@@ -1,0 +1,24 @@
+# QC for Hecatomb - Run Guide
+
+## Workflow Execution
+- Requires Snakemake v8+: `conda activate snakemake_v8.20.3`
+- Basic command: `snakemake --profile profile/slurm/ --config reads=/path/to/reads output=/path/to/output`
+- Required parameters:
+  - `reads`: directory containing paired-end FASTQ files
+  - `output`: destination directory for results
+
+## Environment Setup
+- Uses conda environments defined in `workflow/envs/`
+- Main tools: bbmap, fastp, minimap2, fq, multiqc
+- Create all environments: `for env in workflow/envs/*.yaml; do conda env create -f $env; done`
+
+## Testing Components
+- Dry run: `snakemake -n`
+- Test individual rule: `snakemake --profile profile/slurm/ {rule_name}`
+- Run with specific samples: `--config reads=/path/to/reads "SAMPLES=['sample1','sample2']"`
+
+## Code Style
+- Python: Use functions with docstrings, follow PEP8 style
+- R: tidyverse style with pipe operators (`%>%`)
+- Snakemake: Document each rule with triple-quoted docstrings
+- Follow snake_case naming convention for all files and variables

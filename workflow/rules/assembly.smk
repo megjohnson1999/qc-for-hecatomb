@@ -436,8 +436,8 @@ rule index_contigs:
 
 rule align_host_removed_reads:
     input:
-        r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
-        r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
+        r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq.gz"),
+        r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq.gz"),
         index = os.path.join(dir["output"], "assembly", "contigs.mmi")  # Fixed path to match new index_contigs rule
     output:
         bam_index = os.path.join(dir["output"], "host_removed", "{sample}_to_contig_sorted.bam.bai"),

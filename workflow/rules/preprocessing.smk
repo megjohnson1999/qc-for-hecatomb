@@ -142,8 +142,8 @@ rule remove_vector_contamination:
 
 rule bbmerge:
     input:
-        r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
-        r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
+        r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq.gz"),
+        r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq.gz"),
     output:
         merged = os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"),
         unmerged1 = os.path.join(dir["output"], "bbmerge", "{sample}_R1_unmerged.fastq.gz"),
@@ -205,8 +205,8 @@ rule host_removal:
         bam = temp(os.path.join(dir["output"], "host_removed", "{sample}.bam")),
         sorted = temp(os.path.join(dir["output"], "host_removed", "{sample}_sorted.bam")),
         filtered = temp(os.path.join(dir["output"], "host_removed", "{sample}_filtered.bam")),
-        r1_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
-        r2_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
+        r1_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq.gz"),
+        r2_hr = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq.gz"),
         temp_r1 = temp(os.path.join(dir["output"], "host_removed", "{sample}_temp_R1.fastq")),
         temp_r2 = temp(os.path.join(dir["output"], "host_removed", "{sample}_temp_R2.fastq")),
         stats = os.path.join(dir["logs"], "host_removal", "{sample}_stats.txt")
@@ -269,14 +269,14 @@ rule host_removal:
             touch {output.temp_r2}
         fi
         
-        # Copy temporary files to final output locations
-        echo "Copying to final output files..." >> {log}
-        cat {output.temp_r1} > {output.r1_hr}
-        cat {output.temp_r2} > {output.r2_hr}
+        # Compress temporary files to final output locations
+        echo "Compressing to final output files..." >> {log}
+        gzip -c {output.temp_r1} > {output.r1_hr}
+        gzip -c {output.temp_r2} > {output.r2_hr}
         
         # Count reads in the output files
-        r1_count=$(wc -l < {output.r1_hr} 2>/dev/null | awk '{{print int($1/4)}}' || echo 0)
-        r2_count=$(wc -l < {output.r2_hr} 2>/dev/null | awk '{{print int($1/4)}}' || echo 0)
+        r1_count=$(zcat {output.r1_hr} 2>/dev/null | wc -l | awk '{{print int($1/4)}}' || echo 0)
+        r2_count=$(zcat {output.r2_hr} 2>/dev/null | wc -l | awk '{{print int($1/4)}}' || echo 0)
         
         echo -e "\\nRead counts in output files:" >> {output.stats}
         echo "R1 reads: $r1_count" >> {output.stats}
@@ -328,8 +328,8 @@ rule bbmerge_summary:
 
 rule host_removal_summary:
     input:
-        r1 = expand(os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"), sample=SAMPLES),
-        r2 = expand(os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"), sample=SAMPLES)
+        r1 = expand(os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq.gz"), sample=SAMPLES),
+        r2 = expand(os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq.gz"), sample=SAMPLES)
     output:
         os.path.join(dir["stats"], "qc", "host_removal_stats.tsv")
     conda:

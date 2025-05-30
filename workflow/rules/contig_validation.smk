@@ -31,8 +31,8 @@ def get_contigs_validation_mmi_path(wildcards):
 rule map_reads_to_contigs:
     """Map host-removed reads back to contigs to evaluate assembly quality"""
     input:
-        r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq"),
-        r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq"),
+        r1 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R1.fastq.gz"),
+        r2 = os.path.join(dir["output"], "host_removed", "{sample}_hr_R2.fastq.gz"),
         idx = lambda wildcards: get_contigs_validation_mmi_path(wildcards)
     output:
         bam = os.path.join(dir["output"], "contig_validation", "mapping", "{sample}.bam"),
