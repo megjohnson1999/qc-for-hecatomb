@@ -1,8 +1,9 @@
-reads:
+reads: []  # Can be a single directory or a list of directories
 output: "hecatomb-qc.out"
 log:
 fastq_names_1: "{sample}_R1.fastq.gz"
 fastq_names_2: "{sample}_R2.fastq.gz"
+assembly_strategy: "coassembly"  # Options: "coassembly" or "individual"
 
 
 viral_db: "/ref/sahlab/data/virus_genome_db/sequences_20241205_4728509.fasta"
@@ -33,14 +34,14 @@ qc:
         s1:
           ktrim=l
           k=16
-          mink=8
+          mink=9
           rcomp=f
           ordered=t
           ow=t
         s2:
           ktrim=r
           k=16
-          mink=8
+          mink=9
           rcomp=f
           ordered=t
           ow=t

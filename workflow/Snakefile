@@ -5,9 +5,57 @@ import os
 from glob import glob
 import yaml
 import json
+import pathlib
+from itertools import chain
 
 configfile: "../config/config.yaml"
-SAMPLES, = glob_wildcards(os.path.join(config["reads"],config["fastq_names_1"]))
+
+# Handle both single directory and multiple directories
+read_dirs = config["reads"]
+if not read_dirs:
+    raise ValueError("No read directories specified. Please provide at least one directory in the 'reads' configuration.")
+if not isinstance(read_dirs, list):
+    read_dirs = [read_dirs]  # Convert single string to list
+
+# Get samples from all read directories
+SAMPLES = set()
+SAMPLE_TO_DIR = {}  # Map sample names to their directories
+
+for read_dir in read_dirs:
+    pattern = os.path.join(read_dir, config["fastq_names_1"])
+    dir_samples, = glob_wildcards(pattern)
+    
+    # Add all samples found in this directory
+    for sample in dir_samples:
+        SAMPLES.add(sample)
+        SAMPLE_TO_DIR[sample] = read_dir
+
+SAMPLES = sorted(list(SAMPLES))  # Convert to sorted list for consistency
+
+if not SAMPLES:
+    raise ValueError("No samples found in the specified read directories. Check your directory paths and fastq naming patterns.")
+    
+# Helper functions to get read file paths
+def get_read1_path(wildcards):
+    """Get the path to the R1 file for a given sample"""
+    if wildcards.sample not in SAMPLE_TO_DIR:
+        raise ValueError(f"Sample {wildcards.sample} not found in sample-to-directory mapping")
+    return os.path.join(SAMPLE_TO_DIR[wildcards.sample], config["fastq_names_1"].format(sample=wildcards.sample))
+
+def get_read2_path(wildcards):
+    """Get the path to the R2 file for a given sample"""
+    if wildcards.sample not in SAMPLE_TO_DIR:
+        raise ValueError(f"Sample {wildcards.sample} not found in sample-to-directory mapping")
+    return os.path.join(SAMPLE_TO_DIR[wildcards.sample], config["fastq_names_2"].format(sample=wildcards.sample))
+
+def get_all_read_files():
+    """Get all read files across all directories"""
+    r1_files = []
+    r2_files = []
+    for sample in SAMPLES:
+        r1_files.append(get_read1_path(type('Wildcards', (object,), {'sample': sample})()))
+        r2_files.append(get_read2_path(type('Wildcards', (object,), {'sample': sample})()))
+    return {'r1_files': r1_files, 'r2_files': r2_files}
 
 dir = dict()
 
@@ -32,16 +80,94 @@ dir["stats"] = os.path.join(dir["results"], "stats")
 include: "rules/check_fastq.smk"
 include: "rules/preprocessing.smk"
 include: "rules/mask_host_genome.smk"
+include: "rules/assembly.smk"
+include: "rules/contig_validation.smk"
 #include: "rules/host_removal.smk"
 
+def get_assembly_inputs(wildcards):
+    """Get all expected assembly inputs based on the current assembly strategy.
+    
+    This function returns a list of file paths that should be produced by the workflow,
+    depending on whether we're using coassembly or individual assembly strategy.
+    """
+    inputs = [
+        os.path.join(dir["stats"], "raw_input_data", "basic_stats.txt"),
+        os.path.join(dir["stats"], "qc", "fastp_stats.tsv"),
+        os.path.join(dir["stats"], "qc", "primer_b_stats.tsv"),
+        os.path.join(dir["stats"], "qc", "vector_stats.tsv"),
+        os.path.join(dir["stats"], "qc", "host_removal_stats.tsv"),
+        os.path.join(dir["stats"], "qc", "preprocessing_plots.html"),
+        os.path.join(dir["stats"], "assembly", "assembly_stats.txt"),
+        os.path.join(dir["stats"], "contig_validation", "contig_validation_summary.txt"),
+        os.path.join(dir["output"], "host_removed", "merged.pileup")
+    ]
+    
+    # Add strategy-specific inputs as strings, not functions
+    strategy = config.get("assembly_strategy", "coassembly")
+    if strategy == "coassembly":
+        # For coassembly, we need the MEGAHIT output
+        inputs.append(os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa"))
+    elif strategy in ["individual", "per_sample"]:
+        # For individual assembly, we need all per-sample assemblies and the merged Flye assembly
+        # Add per-sample assemblies individually 
+        for sample in SAMPLES:
+            inputs.append(os.path.join(dir["output"], "assembly", "per_sample", sample, "final.contigs.fa"))
+        # Add the merged Flye assembly
+        inputs.append(os.path.join(dir["output"], "assembly", "flye", "assembly.fasta"))
+    else:
+        print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
+        inputs.append(os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa"))
+        
+    return inputs
+
+# Remove this section
+# assembly_outputs = []
+# if config.get("assembly_strategy", "coassembly") == "coassembly":
+#     # For coassembly
+#     assembly_outputs.append(os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa"))
+# else:
+#     # For individual assembly
+#     for sample in SAMPLES:
+#         assembly_outputs.append(os.path.join(dir["output"], "assembly", "per_sample", sample, "final.contigs.fa"))
+#     assembly_outputs.append(os.path.join(dir["output"], "assembly", "flye", "assembly.fasta"))
+
+# Replace with a function that returns the appropriate files
+def get_strategy_outputs():
+    """Get all assembly output files based on the assembly strategy.
+    
+    Returns a list of expected output files that will always have at least one file.
+    """
+    outputs = []
+    strategy = config.get("assembly_strategy", "coassembly")
+    
+    if strategy == "coassembly":
+        # For coassembly
+        outputs.append(os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa"))
+    elif strategy in ["individual", "per_sample"]:
+        # For individual assembly
+        for sample in SAMPLES:
+            outputs.append(os.path.join(dir["output"], "assembly", "per_sample", sample, "final.contigs.fa"))
+        outputs.append(os.path.join(dir["output"], "assembly", "flye", "assembly.fasta"))
+    else:
+        # Default behavior for unexpected values
+        print(f"Warning: Unexpected assembly_strategy value: '{strategy}', defaulting to coassembly")
+        outputs.append(os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa"))
+    
+    return outputs
+
+# Then modify your rule all
 rule all:
     input:
-        #expand(os.path.join(dir["output"],"{sample}_R2.fastq.gz"), sample = SAMPLES),
+        # Common inputs for all strategies
         os.path.join(dir["stats"], "raw_input_data", "basic_stats.txt"),
-        #os.path.join(dir["stats"], "raw_input_data", "multiqc_report.html"),
-        #expand(os.path.join(dir["output"], "fastp", "{sample}_R2_trimmed.fastq.gz"), sample = SAMPLES),
         os.path.join(dir["stats"], "qc", "fastp_stats.tsv"),
-        #expand(os.path.join(dir["stats"], "rm_vector_contamination", "{sample}_rm_vc.stats"), sample = SAMPLES),
-        #expand(os.path.join(dir["output"], "bbmerge", "{sample}_merged.fastq.gz"), sample = SAMPLES),
-        expand(os.path.join(dir["output"], "host_removed", "{sample}_unmerged_hr_R1.fastq.gz"), sample = SAMPLES),
+        os.path.join(dir["stats"], "qc", "primer_b_stats.tsv"),
+        os.path.join(dir["stats"], "qc", "vector_stats.tsv"),
+        os.path.join(dir["stats"], "qc", "host_removal_stats.tsv"),
+        os.path.join(dir["stats"], "qc", "preprocessing_plots.html"),
+        os.path.join(dir["stats"], "assembly", "assembly_stats.txt"),
+        os.path.join(dir["stats"], "contig_validation", "contig_validation_summary.txt"),
+        os.path.join(dir["output"], "host_removed", "merged.pileup"),
+        # Add assembly files based on strategy
+        [os.path.join(dir["output"], "assembly", "megahit", "final.contigs.fa")] if config.get("assembly_strategy", "coassembly") == "coassembly" else [os.path.join(dir["output"], "assembly", "flye", "assembly.fasta")] + [os.path.join(dir["output"], "assembly", "per_sample", sample, "final.contigs.fa") for sample in SAMPLES],
     default_target: True

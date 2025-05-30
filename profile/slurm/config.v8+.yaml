@@ -11,6 +11,7 @@ default-resources:
 jobs: 40
 latency-wait: 60 
 use-conda: True
+conda-prefix: "/ref/sahlab/software/miniforge3/envs/smk_envs_hecatomb_qc"
 keep-going: True
 rerun-incomplete: True
 printshellcmds: True
@@ -33,3 +34,16 @@ set-resources:
         mem: 64G
     host_removal:
         mem: 64G 
+    megahit_coassembly:
+        mem: 300G
+        runtime: 4000
+    megahit_individual_assembly:
+        mem: 64G
+        runtime: 1440
+    flye_merge_assemblies:
+        mem: 128G
+        runtime: 2880
+    map_reads_to_contigs:
+        mem: 64G
+    generate_per_sample_coverage:
+        mem: 100G
